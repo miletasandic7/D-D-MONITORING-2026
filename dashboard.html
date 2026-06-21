@@ -452,6 +452,149 @@
             box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
         }
 
+        .event-location {
+            font-size: 11px;
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #0a0a12 0%, #151520 100%);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .action-btn.police {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        .action-btn.police:hover {
+            background: rgba(255, 68, 68, 0.1);
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0d0d15 0%, #1a1a2e 100%);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            position: relative;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00ffff;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        }
+
+        .modal-text {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            color: #e0e0e0;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #ff4444;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #ff6666;
+            transform: scale(1.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            background: linear-gradient(135deg, #00ffff 0%, #00cccc 100%);
+            border: none;
+            color: #0a0a0f;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            background: linear-gradient(135deg, #00cccc 0%, #00ffff 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+
+        .modal-btn.secondary {
+            background: linear-gradient(135deg, #0a0a12 0%, #151520 100%);
+            border: 1px solid #333;
+            color: #e0e0e0;
+        }
+
+        .modal-btn.secondary:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
         @media (max-width: 768px) {
             .camera-grid {
                 grid-template-columns: 1fr;
@@ -631,49 +774,92 @@
         <div class="timeline-section">
             <h2 class="section-title">Security Event Timeline</h2>
             <div class="timeline-container">
-                <div class="timeline-event alert" data-camera="CAM-02">
+                <div class="timeline-event alert" data-camera="CAM-02" data-location="Main Facility, Warehouse Sector 3, Dock 4">
                     <div class="event-time">2024-06-21 14:32:15</div>
                     <div class="event-type">MOTION DETECTED</div>
+                    <div class="event-location">📍 Main Facility, Warehouse Sector 3, Dock 4</div>
                     <div class="event-description" contenteditable="true" data-original="Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.">Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.</div>
                     <div class="edit-hint">Click to edit description</div>
-                    <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                        <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
+                    </div>
                 </div>
-                <div class="timeline-event">
+                <div class="timeline-event" data-camera="CAM-01" data-location="Main Facility, Entrance Hall, Security Checkpoint">
                     <div class="event-time">2024-06-21 14:28:42</div>
                     <div class="event-type">ACCESS GRANTED</div>
+                    <div class="event-location">📍 Main Facility, Entrance Hall, Security Checkpoint</div>
                     <div class="event-description" contenteditable="true" data-original="Employee ID #4521 entered through main entrance. Badge verified successfully.">Employee ID #4521 entered through main entrance. Badge verified successfully.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                    </div>
                 </div>
-                <div class="timeline-event">
+                <div class="timeline-event" data-camera="CAM-04" data-location="Main Facility, Server Room, Data Center">
                     <div class="event-time">2024-06-21 14:15:08</div>
                     <div class="event-type">SYSTEM UPDATE</div>
+                    <div class="event-location">📍 Main Facility, Server Room, Data Center</div>
                     <div class="event-description" contenteditable="true" data-original="AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.">AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                    </div>
                 </div>
-                <div class="timeline-event alert" data-camera="CAM-04">
+                <div class="timeline-event alert" data-camera="CAM-04" data-location="Main Facility, Server Room, Access Point A">
                     <div class="event-time">2024-06-21 13:55:33</div>
                     <div class="event-type">DOOR FORCE</div>
+                    <div class="event-location">📍 Main Facility, Server Room, Access Point A</div>
                     <div class="event-description" contenteditable="true" data-original="Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.">Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.</div>
                     <div class="edit-hint">Click to edit description</div>
-                    <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                        <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
+                    </div>
                 </div>
-                <div class="timeline-event">
+                <div class="timeline-event" data-camera="CAM-08" data-location="Main Facility, Perimeter North, Sector 1">
                     <div class="event-time">2024-06-21 13:42:19</div>
                     <div class="event-type">PERIMETER CHECK</div>
+                    <div class="event-location">📍 Main Facility, Perimeter North, Sector 1</div>
                     <div class="event-description" contenteditable="true" data-original="Automated perimeter scan completed. No anomalies detected. All sensors operational.">Automated perimeter scan completed. No anomalies detected. All sensors operational.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                    </div>
                 </div>
-                <div class="timeline-event">
+                <div class="timeline-event" data-camera="CAM-01" data-location="Main Facility, Security Office, Command Center">
                     <div class="event-time">2024-06-21 13:30:00</div>
                     <div class="event-type">SHIFT CHANGE</div>
+                    <div class="event-location">📍 Main Facility, Security Office, Command Center</div>
                     <div class="event-description" contenteditable="true" data-original="Security shift change completed. New team on duty. Handover documentation filed.">Security shift change completed. New team on duty. Handover documentation filed.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <div class="action-buttons">
+                        <button class="action-btn police" onclick="generatePoliceDispatch(this)">🚨 POLICE DISPATCH</button>
+                        <button class="action-btn" onclick="generateIncidentReport(this)">📄 INCIDENT REPORT</button>
+                    </div>
                 </div>
             </div>
             <div class="timeline-controls">
                 <button class="timeline-btn" onclick="scrollTimeline('left')">← Previous</button>
                 <button class="timeline-btn" onclick="scrollTimeline('right')">Next →</button>
                 <button class="timeline-btn" onclick="saveAllEdits()">Save All Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for police dispatch and incident reports -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-header" id="modal-header">CRITICAL INCIDENT</div>
+            <div class="modal-text" id="modal-text"></div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+                <button class="modal-btn secondary" onclick="closeModal()">Close</button>
             </div>
         </div>
     </div>
@@ -888,6 +1074,85 @@
                 cameraFeeds.forEach(f => f.classList.remove('active'));
                 this.classList.add('active');
             });
+        });
+
+        // Generate Police Dispatch Info
+        function generatePoliceDispatch(button) {
+            const eventElement = button.closest('.timeline-event');
+            const location = eventElement.dataset.location;
+            const cameraId = eventElement.dataset.camera;
+            const time = eventElement.querySelector('.event-time').innerText;
+            const description = eventElement.querySelector('.event-description').innerText;
+            
+            const dispatchInfo = `CRITICAL INCIDENT AT: ${location}
+REPORTED VIA CAMERA: ${cameraId}
+TIMESTAMP: ${time}
+SUSPECT INFO: ${description}`;
+            
+            showModal('🚨 POLICE DISPATCH INFO', dispatchInfo);
+        }
+
+        // Generate Incident Report
+        function generateIncidentReport(button) {
+            const eventElement = button.closest('.timeline-event');
+            const location = eventElement.dataset.location;
+            const cameraId = eventElement.dataset.camera;
+            const time = eventElement.querySelector('.event-time').innerText;
+            const eventType = eventElement.querySelector('.event-type').innerText;
+            const description = eventElement.querySelector('.event-description').innerText;
+            const isAlert = eventElement.classList.contains('alert');
+            const threatStatus = isAlert ? 'Active' : 'Dismissed';
+            
+            // Determine suspect classification based on event type
+            let suspectClassification = 'Unknown';
+            if (eventType.includes('MOTION') || eventType.includes('VEHICLE')) {
+                suspectClassification = 'Vehicle';
+            } else if (eventType.includes('PERSON') || eventType.includes('ACCESS')) {
+                suspectClassification = 'Person';
+            } else if (eventType.includes('DOOR') || eventType.includes('FORCE')) {
+                suspectClassification = 'Person (Potential Intruder)';
+            }
+            
+            const report = `INCIDENT REPORT
+---------------------------
+Date/Time of Event: ${time}
+Location of Occurrence: ${location}
+Camera Source: ${cameraId}
+Suspect Classification: ${suspectClassification}
+Suspect Appearance: ${description}
+Activity Observed: ${eventType}
+Current Threat Status: ${threatStatus}
+---------------------------
+Report Generated Automatically by D&D Global AI Platform.`;
+            
+            showModal('📄 INCIDENT REPORT', report);
+        }
+
+        // Modal functions
+        function showModal(title, text) {
+            document.getElementById('modal-header').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('modal-text').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Text copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
         });
     </script>
 </body>
