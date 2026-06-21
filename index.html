@@ -132,6 +132,11 @@
             box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
         }
 
+        .camera-feed.alert {
+            border-color: #ff4444;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+        }
+
         .camera-label {
             position: absolute;
             top: 10px;
@@ -390,12 +395,74 @@
             }
         }
 
+        .metrics-bar {
+            background: linear-gradient(135deg, #0d0d15 0%, #1a1a2e 100%);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: #666;
+            margin-left: 3px;
+        }
+
+        .dismiss-btn {
+            background: linear-gradient(135deg, #0a0a12 0%, #151520 100%);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .dismiss-btn:hover {
+            background: rgba(255, 68, 68, 0.1);
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+        }
+
         @media (max-width: 768px) {
             .camera-grid {
                 grid-template-columns: 1fr;
             }
             
             .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .metrics-bar {
                 flex-direction: column;
                 gap: 15px;
             }
@@ -424,6 +491,21 @@
             </div>
         </header>
 
+        <div class="metrics-bar">
+            <div class="metric-item">
+                <div class="metric-label">Total Storage Used</div>
+                <div class="metric-value"><span id="storage-used">2.4</span><span class="metric-unit">TB</span></div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">Active AI Streams</div>
+                <div class="metric-value"><span id="ai-streams">9</span><span class="metric-unit">/9</span></div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">Network Bandwidth</div>
+                <div class="metric-value"><span id="bandwidth">847</span><span class="metric-unit">Mbps</span></div>
+            </div>
+        </div>
+
         <div class="main-content">
             <div class="camera-section">
                 <h2 class="section-title">Live Camera Feeds</h2>
@@ -436,7 +518,7 @@
                         </div>
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
-                    <div class="camera-feed active">
+                    <div class="camera-feed active alert">
                         <div class="camera-label">CAM-02 Parking Lot</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -452,7 +534,7 @@
                         </div>
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
-                    <div class="camera-feed active">
+                    <div class="camera-feed active alert">
                         <div class="camera-label">CAM-04 Server Room</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -549,11 +631,12 @@
         <div class="timeline-section">
             <h2 class="section-title">Security Event Timeline</h2>
             <div class="timeline-container">
-                <div class="timeline-event alert">
+                <div class="timeline-event alert" data-camera="CAM-02">
                     <div class="event-time">2024-06-21 14:32:15</div>
                     <div class="event-type">MOTION DETECTED</div>
                     <div class="event-description" contenteditable="true" data-original="Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.">Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
                 </div>
                 <div class="timeline-event">
                     <div class="event-time">2024-06-21 14:28:42</div>
@@ -567,11 +650,12 @@
                     <div class="event-description" contenteditable="true" data-original="AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.">AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.</div>
                     <div class="edit-hint">Click to edit description</div>
                 </div>
-                <div class="timeline-event alert">
+                <div class="timeline-event alert" data-camera="CAM-04">
                     <div class="event-time">2024-06-21 13:55:33</div>
                     <div class="event-type">DOOR FORCE</div>
                     <div class="event-description" contenteditable="true" data-original="Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.">Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.</div>
                     <div class="edit-hint">Click to edit description</div>
+                    <button class="dismiss-btn" onclick="dismissAlert(this)">Dismiss Alert</button>
                 </div>
                 <div class="timeline-event">
                     <div class="event-time">2024-06-21 13:42:19</div>
@@ -701,16 +785,101 @@
             });
         });
 
-        // Save all edits
+        // Save all edits to local JSON file
         function saveAllEdits() {
+            const incidents = [];
             descriptions.forEach(desc => {
+                const eventElement = desc.closest('.timeline-event');
+                const time = eventElement.querySelector('.event-time').innerText;
+                const type = eventElement.querySelector('.event-type').innerText;
+                const isAlert = eventElement.classList.contains('alert');
+                
+                incidents.push({
+                    time: time,
+                    type: type,
+                    description: desc.innerText,
+                    isAlert: isAlert,
+                    original: desc.dataset.original
+                });
+                
                 if (desc.style.borderColor === 'rgb(0, 255, 136)') {
                     desc.style.borderColor = 'transparent';
                     desc.style.background = 'rgba(0, 255, 255, 0.05)';
                 }
             });
-            alert('All changes saved successfully!');
+            
+            // Save to localStorage for persistence across refreshes
+            localStorage.setItem('incidents', JSON.stringify(incidents));
+            
+            // Create and download JSON file
+            const dataStr = JSON.stringify(incidents, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'incidents.json';
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            alert('All changes saved successfully! incidents.json downloaded.');
         }
+
+        // Dismiss alert function
+        function dismissAlert(button) {
+            const eventElement = button.closest('.timeline-event');
+            const cameraId = eventElement.dataset.camera;
+            
+            // Remove alert styling from timeline event
+            eventElement.classList.remove('alert');
+            button.remove();
+            
+            // Find and clear alert from corresponding camera feed
+            const cameraFeeds = document.querySelectorAll('.camera-feed');
+            cameraFeeds.forEach(feed => {
+                const label = feed.querySelector('.camera-label').innerText;
+                if (label.includes(cameraId)) {
+                    feed.classList.remove('alert');
+                }
+            });
+        }
+
+        // Load incidents from localStorage on page load
+        function loadIncidents() {
+            const saved = localStorage.getItem('incidents');
+            if (saved) {
+                const incidents = JSON.parse(saved);
+                descriptions.forEach((desc, index) => {
+                    if (incidents[index]) {
+                        desc.innerText = incidents[index].description;
+                    }
+                });
+            }
+        }
+
+        // Live metrics simulation
+        function updateMetrics() {
+            const storageUsed = document.getElementById('storage-used');
+            const aiStreams = document.getElementById('ai-streams');
+            const bandwidth = document.getElementById('bandwidth');
+            
+            // Simulate storage increment
+            let currentStorage = parseFloat(storageUsed.innerText);
+            currentStorage += (Math.random() * 0.01);
+            storageUsed.innerText = currentStorage.toFixed(2);
+            
+            // Simulate bandwidth fluctuation
+            let currentBandwidth = parseInt(bandwidth.innerText);
+            currentBandwidth += Math.floor(Math.random() * 20) - 10;
+            if (currentBandwidth < 700) currentBandwidth = 700;
+            if (currentBandwidth > 950) currentBandwidth = 950;
+            bandwidth.innerText = currentBandwidth;
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            loadIncidents();
+            setInterval(updateMetrics, 2000);
+        });
 
         // Camera feed click interaction
         const cameraFeeds = document.querySelectorAll('.camera-feed');
