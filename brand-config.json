@@ -1,0 +1,54 @@
+{
+  "brand": {
+    "name": "D&D Global AI Surveillance",
+    "short_name": "D&D Surveillance",
+    "logo": "logo.png",
+    "favicon": "favicon.ico"
+  },
+  "colors": {
+    "primary": "#00ffff",
+    "secondary": "#00ff88",
+    "accent": "#ff4444",
+    "background": "#0a0a0f",
+    "surface": "#0d0d15",
+    "text": "#e0e0e0",
+    "text_muted": "#888888"
+  },
+  "theme": {
+    "mode": "dark",
+    "neon_glow": true,
+    "high_contrast": true
+  },
+  "portal": {
+    "title": "SECURITY DASHBOARD",
+    "subtitle": "MONITORING",
+    "login_title": "System Access",
+    "dashboard_title": "Live Camera Feeds"
+  },
+  "features": {
+    "metrics_enabled": true,
+    "timeline_enabled": true,
+    "billing_enabled": true,
+    "ai_detection_enabled": true,
+    "dismiss_alerts_enabled": true
+  },
+  "api": {
+    "base_url": "/api",
+    "version": "v1",
+    "endpoints": {
+      "search_attributes": "/api/search/attributes",
+      "events": "/api/events",
+      "cameras": "/api/cameras"
+    }
+  },
+  "video": {
+    "default_resolution": "1920x1080",
+    "default_fps": 30,
+    "default_codec": "H264"
+  },
+  "localization": {
+    "default_language": "en",
+    "timezone": "UTC",
+    "date_format": "YYYY-MM-DD HH:mm:ss"
+  }
+}

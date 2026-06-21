@@ -1,0 +1,100 @@
+{
+  "cameras": [
+    {
+      "id": "CAM-01",
+      "name": "Main Entrance",
+      "rtsp_url": "rtsp://192.168.1.101:554/stream1",
+      "location": "entrance",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-02",
+      "name": "Parking Lot",
+      "rtsp_url": "rtsp://192.168.1.102:554/stream1",
+      "location": "parking",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-03",
+      "name": "Lobby",
+      "rtsp_url": "rtsp://192.168.1.103:554/stream1",
+      "location": "lobby",
+      "enabled": true,
+      "resolution": "1280x720",
+      "fps": 25,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-04",
+      "name": "Server Room",
+      "rtsp_url": "rtsp://192.168.1.104:554/stream1",
+      "location": "server_room",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-05",
+      "name": "Warehouse A",
+      "rtsp_url": "rtsp://192.168.1.105:554/stream1",
+      "location": "warehouse_a",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-06",
+      "name": "Warehouse B",
+      "rtsp_url": "rtsp://192.168.1.106:554/stream1",
+      "location": "warehouse_b",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-07",
+      "name": "Loading Dock",
+      "rtsp_url": "rtsp://192.168.1.107:554/stream1",
+      "location": "loading_dock",
+      "enabled": true,
+      "resolution": "1280x720",
+      "fps": 25,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-08",
+      "name": "Perimeter North",
+      "rtsp_url": "rtsp://192.168.1.108:554/stream1",
+      "location": "perimeter_north",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    },
+    {
+      "id": "CAM-09",
+      "name": "Perimeter South",
+      "rtsp_url": "rtsp://192.168.1.109:554/stream1",
+      "location": "perimeter_south",
+      "enabled": true,
+      "resolution": "1920x1080",
+      "fps": 30,
+      "codec": "H264"
+    }
+  ],
+  "streaming": {
+    "buffer_size": 512000,
+    "timeout": 30,
+    "reconnect_attempts": 5,
+    "reconnect_delay": 5
+  }
+}

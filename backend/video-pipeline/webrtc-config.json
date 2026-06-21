@@ -1,0 +1,50 @@
+{
+  "webrtc": {
+    "server": {
+      "host": "localhost",
+      "port": 7880,
+      "protocol": "http"
+    },
+    "livekit": {
+      "api_key": "devkey",
+      "api_secret": "devsecret",
+      "room_name_prefix": "surveillance-"
+    },
+    "mediasoup": {
+      "router": {
+        "max_bitrate": 10000000,
+        "initial_available_outgoing_bitrate": 1000000
+      },
+      "transport": {
+        "listen_infos": [
+          {
+            "protocol": "udp",
+            "ip": "0.0.0.0",
+            "announced_ip": "127.0.0.1"
+          }
+        ]
+      }
+    },
+    "codecs": [
+      {
+        "kind": "audio",
+        "name": "opus",
+        "clock_rate": 48000,
+        "channels": 2
+      },
+      {
+        "kind": "video",
+        "name": "VP8",
+        "clock_rate": 90000
+      },
+      {
+        "kind": "video",
+        "name": "H264",
+        "clock_rate": 90000,
+        "parameters": {
+          "packetization-mode": 1
+        }
+      }
+    ]
+  }
+}
