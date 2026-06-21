@@ -81,10 +81,23 @@
         }
 
         .main-content {
-            display: grid;
-            grid-template-columns: 350px 1fr 350px;
+            display: flex;
+            flex-direction: row;
             gap: 20px;
             margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        .timeline-section {
+            flex: 0 0 380px;
+        }
+
+        .camera-section {
+            flex: 1;
+        }
+
+        .billing-section {
+            flex: 0 0 350px;
         }
 
         .camera-section {
