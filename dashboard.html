@@ -2395,6 +2395,43 @@
         const supabaseKey = 'sb_publishable_UA7h7UDvMyjrkUjlNcWh3A_nrK3PGuF';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+        // Global Functions for HTML onclick attributes
+        window.toggleTreeNode = function(element) {
+            const toggle = element.querySelector('.tree-toggle');
+            const children = element.nextElementSibling;
+            
+            if (children && children.classList.contains('tree-children')) {
+                toggle.classList.toggle('expanded');
+                children.classList.toggle('expanded');
+            }
+        };
+
+        window.selectCamera = function(cameraId) {
+            // Remove previous selection
+            document.querySelectorAll('.tree-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.currentTarget.classList.add('selected');
+            
+            // Highlight corresponding camera in grid
+            window.highlightCamera(cameraId);
+        };
+
+        window.highlightCamera = function(cameraId) {
+            // Remove active class from all camera list items
+            document.querySelectorAll('.camera-list-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected camera
+            const selectedItem = document.querySelector(`.camera-list-item[onclick*="${cameraId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
+        };
+
         // PayPal Smart Buttons Integration
         paypal.Buttons({
             style: {
@@ -2803,30 +2840,6 @@
         // Start time updates
         setInterval(updateSystemTime, 50); // Update every 50ms for milliseconds
         setInterval(updateCameraTimestamps, 1000); // Update every second
-
-        // Phase 2 UI Enhancement Functions
-        function toggleTreeNode(element) {
-            const toggle = element.querySelector('.tree-toggle');
-            const children = element.nextElementSibling;
-            
-            if (children && children.classList.contains('tree-children')) {
-                toggle.classList.toggle('expanded');
-                children.classList.toggle('expanded');
-            }
-        }
-
-        function selectCamera(cameraId) {
-            // Remove previous selection
-            document.querySelectorAll('.tree-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            // Add selection to clicked item
-            event.currentTarget.classList.add('selected');
-            
-            // Highlight corresponding camera in grid
-            highlightCamera(cameraId);
-        }
 
         function filterCameras() {
             const searchTerm = document.getElementById('camera-search').value.toLowerCase();
@@ -3461,27 +3474,6 @@ Report Generated Automatically by D&D Global AI Platform.`;
 
         function exportLogs() {
             alert('Exporting event logs to CSV...');
-        }
-
-        // Camera Directory Highlight Function
-        function highlightCamera(cameraId) {
-            // Remove active class from all camera list items
-            document.querySelectorAll('.camera-list-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to clicked item
-            event.target.classList.add('active');
-            
-            // Highlight corresponding camera in grid
-            const cameraFeeds = document.querySelectorAll('.camera-feed');
-            cameraFeeds.forEach(feed => {
-                const label = feed.querySelector('.camera-label').innerText;
-                if (label.includes(cameraId)) {
-                    cameraFeeds.forEach(f => f.classList.remove('active'));
-                    feed.classList.add('active');
-                }
-            });
         }
 
         // Panel Action Functions
