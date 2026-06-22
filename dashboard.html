@@ -1000,6 +1000,161 @@
             color: #10B981;
         }
 
+        /* Emergency Pop-up Alert */
+        .emergency-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(239, 68, 68, 0.95);
+            border: 4px solid #EF4444;
+            border-radius: 12px;
+            padding: 32px 48px;
+            z-index: 9999;
+            display: none;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(239, 68, 68, 0.8);
+            animation: emergencyPulse 1s infinite;
+        }
+
+        @keyframes emergencyPulse {
+            0%, 100% { box-shadow: 0 0 60px rgba(239, 68, 68, 0.8); }
+            50% { box-shadow: 0 0 100px rgba(239, 68, 68, 1); }
+        }
+
+        .emergency-popup.active {
+            display: block;
+        }
+
+        .emergency-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .emergency-location {
+            font-size: 28px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 24px;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 16px 24px;
+            border-radius: 8px;
+        }
+
+        .emergency-close {
+            background-color: #ffffff;
+            color: #EF4444;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .emergency-close:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Incident Description Section */
+        .incident-description-section {
+            margin-bottom: 16px;
+        }
+
+        .incident-textarea {
+            background-color: #0A0C10;
+            border: 2px solid #EF4444;
+            border-radius: 8px;
+            padding: 16px;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 120px;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .incident-textarea:focus {
+            border-color: #DC2626;
+        }
+
+        /* Emergency Buttons Section */
+        .emergency-buttons-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .emergency-button {
+            background-color: #0A0C10;
+            border: 2px solid #2D3748;
+            color: #ffffff;
+            padding: 16px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .emergency-button.police {
+            border-color: #EF4444;
+            color: #EF4444;
+        }
+
+        .emergency-button.police:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: #DC2626;
+        }
+
+        .emergency-button.report {
+            border-color: #3B82F6;
+            color: #3B82F6;
+        }
+
+        .emergency-button.report:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-color: #2563EB;
+        }
+
+        /* Simple Camera List */
+        .camera-list-simple {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .camera-list-simple .camera-list-item {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #ffffff;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .camera-list-simple .camera-list-item:hover {
+            background-color: #1A1D24;
+            border-color: #4A5568;
+        }
+
+        .camera-list-simple .camera-list-item.alert {
+            border-color: #EF4444;
+            color: #EF4444;
+        }
+
         .action-btn-vertical:hover {
             border-color: #4A5568;
         }
@@ -1528,6 +1683,13 @@
     </style>
 </head>
 <body>
+    <!-- Emergency Pop-up Alert -->
+    <div class="emergency-popup" id="emergency-popup">
+        <div class="emergency-title">⚠️ CRITICAL ALERT</div>
+        <div class="emergency-location" id="emergency-location">CRITICAL BREACH AT: Warehouse Sector 3, Dock 4</div>
+        <button class="emergency-close" onclick="closeEmergencyPopup()">ACKNOWLEDGE ALERT</button>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-content">
@@ -1566,191 +1728,30 @@
 
         <div class="main-content-wrapper">
             <div class="left-sidebar-panel">
-                <div class="settings-section">
-                    <h2 class="section-title">Platform Settings & Controls</h2>
-                    <div class="settings-controls">
-                        <button class="action-btn-vertical" onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
-                        <button class="action-btn-vertical" onclick="refreshFeeds()">🔄 Refresh Camera Feeds</button>
-                        <button class="action-btn-vertical" onclick="exportLogs()">📥 Export Event Logs</button>
+                <div class="incident-description-section">
+                    <h2 class="section-title">ACTIVE INCIDENT DESCRIPTION</h2>
+                    <div class="incident-textarea" contenteditable="true" id="incident-description">
+                        Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched to investigate.
                     </div>
                 </div>
 
-                <div class="timeline-section">
-                    <h2 class="section-title">Security Event Timeline</h2>
-                    <div class="timeline-container">
-                        <div class="timeline-event alert" data-camera="CAM-02" data-location="Main Facility, Warehouse Sector 3, Dock 4">
-                            <div class="event-time">2024-06-21 14:32:15</div>
-                            <div class="event-type">MOTION DETECTED</div>
-                            <div class="event-location">📍 Main Facility, Warehouse Sector 3, Dock 4</div>
-                            <div class="event-description" contenteditable="true" data-original="Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.">Unauthorized vehicle detected in restricted parking zone near loading dock. Security team dispatched.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                        <div class="timeline-event" data-camera="CAM-01" data-location="Main Facility, Entrance Hall, Security Checkpoint">
-                            <div class="event-time">2024-06-21 14:28:42</div>
-                            <div class="event-type">ACCESS GRANTED</div>
-                            <div class="event-location">📍 Main Facility, Entrance Hall, Security Checkpoint</div>
-                            <div class="event-description" contenteditable="true" data-original="Employee ID #4521 entered through main entrance. Badge verified successfully.">Employee ID #4521 entered through main entrance. Badge verified successfully.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                        <div class="timeline-event" data-camera="CAM-04" data-location="Main Facility, Server Room, Data Center">
-                            <div class="event-time">2024-06-21 14:15:08</div>
-                            <div class="event-type">SYSTEM UPDATE</div>
-                            <div class="event-location">📍 Main Facility, Server Room, Data Center</div>
-                            <div class="event-description" contenteditable="true" data-original="AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.">AI model updated to v2.4.1. Detection accuracy improved by 12%. All systems nominal.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                        <div class="timeline-event alert" data-camera="CAM-04" data-location="Main Facility, Server Room, Access Point A">
-                            <div class="event-time">2024-06-21 13:55:33</div>
-                            <div class="event-type">DOOR FORCE</div>
-                            <div class="event-location">📍 Main Facility, Server Room, Access Point A</div>
-                            <div class="event-description" contenteditable="true" data-original="Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.">Forced entry attempt detected at server room access point. Alarm triggered. No breach confirmed.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                        <div class="timeline-event" data-camera="CAM-08" data-location="Main Facility, Perimeter North, Sector 1">
-                            <div class="event-time">2024-06-21 13:42:19</div>
-                            <div class="event-type">PERIMETER CHECK</div>
-                            <div class="event-location">📍 Main Facility, Perimeter North, Sector 1</div>
-                            <div class="event-description" contenteditable="true" data-original="Automated perimeter scan completed. No anomalies detected. All sensors operational.">Automated perimeter scan completed. No anomalies detected. All sensors operational.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                        <div class="timeline-event" data-camera="CAM-01" data-location="Main Facility, Security Office, Command Center">
-                            <div class="event-time">2024-06-21 13:30:00</div>
-                            <div class="event-type">SHIFT CHANGE</div>
-                            <div class="event-location">📍 Main Facility, Security Office, Command Center</div>
-                            <div class="event-description" contenteditable="true" data-original="Security shift change completed. New team on duty. Handover documentation filed.">Security shift change completed. New team on duty. Handover documentation filed.</div>
-                            <div class="edit-hint">Click to edit description</div>
-                        </div>
-                    </div>
-                    <div class="timeline-controls">
-                        <button class="timeline-btn" onclick="scrollTimeline('left')">← Previous</button>
-                        <button class="timeline-btn" onclick="scrollTimeline('right')">Next →</button>
-                        <button class="timeline-btn" onclick="saveAllEdits()">Save All Changes</button>
-                    </div>
+                <div class="emergency-buttons-section">
+                    <button class="emergency-button police" onclick="callPolice()">🚨 CALL LOCAL POLICE (DISPATCH INFO)</button>
+                    <button class="emergency-button report" onclick="generateReport()">📄 GENERATE INCIDENT REPORT</button>
                 </div>
 
                 <div class="camera-directory">
-                    <h2 class="section-title">Device Navigation</h2>
-                    <div class="device-tree-container">
-                        <input type="text" class="search-bar" placeholder="🔍 Search cameras by name or IP..." id="camera-search" oninput="filterCameras()">
-                        
-                        <div class="favorites-tabs">
-                            <button class="favorites-tab active" onclick="switchFavoritesTab('tree')">Device Tree</button>
-                            <button class="favorites-tab" onclick="switchFavoritesTab('favorites')">Favorites</button>
-                        </div>
-                        
-                        <div id="device-tree-panel" class="device-tree">
-                            <div class="tree-node">
-                                <div class="tree-item" onclick="toggleTreeNode(this)">
-                                    <span class="tree-toggle expanded">▶</span>
-                                    <span class="tree-icon">🏢</span>
-                                    <span class="tree-label">Main Facility</span>
-                                    <span class="alarm-badge">2</span>
-                                </div>
-                                <div class="tree-children expanded">
-                                    <div class="tree-node">
-                                        <div class="tree-item" onclick="toggleTreeNode(this)">
-                                            <span class="tree-toggle expanded">▶</span>
-                                            <span class="tree-icon">🚪</span>
-                                            <span class="tree-label">Entrance Zone</span>
-                                        </div>
-                                        <div class="tree-children expanded">
-                                            <div class="tree-item" onclick="selectCamera('CAM-01')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-01 Main Entrance</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                            <div class="tree-item" onclick="selectCamera('CAM-03')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-03 Lobby</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="tree-node">
-                                        <div class="tree-item" onclick="toggleTreeNode(this)">
-                                            <span class="tree-toggle expanded">▶</span>
-                                            <span class="tree-icon">🚗</span>
-                                            <span class="tree-label">Parking Zone</span>
-                                            <span class="alarm-badge">1</span>
-                                        </div>
-                                        <div class="tree-children expanded">
-                                            <div class="tree-item" onclick="selectCamera('CAM-02')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-02 Parking Lot</span>
-                                                <span class="status-indicator online"></span>
-                                                <span class="alarm-badge">1</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="tree-node">
-                                        <div class="tree-item" onclick="toggleTreeNode(this)">
-                                            <span class="tree-toggle expanded">▶</span>
-                                            <span class="tree-icon">🏭</span>
-                                            <span class="tree-label">Warehouse Zone</span>
-                                            <span class="alarm-badge">1</span>
-                                        </div>
-                                        <div class="tree-children expanded">
-                                            <div class="tree-item" onclick="selectCamera('CAM-04')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-04 Server Room</span>
-                                                <span class="status-indicator online"></span>
-                                                <span class="alarm-badge">1</span>
-                                            </div>
-                                            <div class="tree-item" onclick="selectCamera('CAM-05')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-05 Warehouse A</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                            <div class="tree-item" onclick="selectCamera('CAM-06')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-06 Warehouse B</span>
-                                                <span class="status-indicator offline"></span>
-                                            </div>
-                                            <div class="tree-item" onclick="selectCamera('CAM-07')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-07 Loading Dock</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="tree-node">
-                                        <div class="tree-item" onclick="toggleTreeNode(this)">
-                                            <span class="tree-toggle expanded">▶</span>
-                                            <span class="tree-icon">🛡️</span>
-                                            <span class="tree-label">Perimeter Zone</span>
-                                        </div>
-                                        <div class="tree-children expanded">
-                                            <div class="tree-item" onclick="selectCamera('CAM-08')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-08 Perimeter North</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                            <div class="tree-item" onclick="selectCamera('CAM-09')">
-                                                <span class="tree-icon">📹</span>
-                                                <span class="tree-label">CAM-09 Perimeter South</span>
-                                                <span class="status-indicator online"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="favorites-panel" class="saved-views" style="display: none;">
-                            <div class="saved-view-item" onclick="loadSavedView('entrance')">
-                                <div class="saved-view-name">🚪 Entrance View</div>
-                                <div class="saved-view-cameras">CAM-01, CAM-03</div>
-                            </div>
-                            <div class="saved-view-item" onclick="loadSavedView('warehouse')">
-                                <div class="saved-view-name">🏭 Warehouse View</div>
-                                <div class="saved-view-cameras">CAM-04, CAM-05, CAM-06, CAM-07</div>
-                            </div>
-                            <div class="saved-view-item" onclick="loadSavedView('perimeter')">
-                                <div class="saved-view-name">🛡️ Perimeter View</div>
-                                <div class="saved-view-cameras">CAM-08, CAM-09</div>
-                            </div>
-                            <div class="add-view-btn" onclick="createNewView()">+ Create New View</div>
-                        </div>
+                    <h2 class="section-title">CAMERA LIST</h2>
+                    <div class="camera-list-simple">
+                        <div class="camera-list-item" onclick="selectCamera('CAM-01')">CAM-01 Main Entrance</div>
+                        <div class="camera-list-item alert" onclick="selectCamera('CAM-02')">CAM-02 Parking Lot ⚠️</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-03')">CAM-03 Lobby</div>
+                        <div class="camera-list-item alert" onclick="selectCamera('CAM-04')">CAM-04 Server Room ⚠️</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-05')">CAM-05 Warehouse A</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-06')">CAM-06 Warehouse B</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-07')">CAM-07 Loading Dock</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-08')">CAM-08 Perimeter North</div>
+                        <div class="camera-list-item" onclick="selectCamera('CAM-09')">CAM-09 Perimeter South</div>
                     </div>
                 </div>
 
@@ -2993,6 +2994,58 @@
                 alert(`Camera preset applied: ${preset}`);
                 // In a real implementation, this would send PTZ preset command to the camera
             }
+        }
+
+        // Emergency Pop-up Functions
+        function showEmergencyPopup(location) {
+            const popup = document.getElementById('emergency-popup');
+            const locationElement = document.getElementById('emergency-location');
+            locationElement.textContent = `CRITICAL BREACH AT: ${location}`;
+            popup.classList.add('active');
+        }
+
+        function closeEmergencyPopup() {
+            const popup = document.getElementById('emergency-popup');
+            popup.classList.remove('active');
+        }
+
+        // Trigger emergency pop-up for alert cameras
+        function checkForAlerts() {
+            const alertCameras = document.querySelectorAll('.camera-feed.alert');
+            alertCameras.forEach(camera => {
+                const cameraLabel = camera.querySelector('.camera-label').textContent;
+                const cameraId = cameraLabel.split(' ')[0];
+                
+                // Map camera IDs to specific locations
+                const locationMap = {
+                    'CAM-02': 'Parking Lot Zone, Main Gate',
+                    'CAM-04': 'Server Room Zone, Rack 4'
+                };
+                
+                if (locationMap[cameraId]) {
+                    showEmergencyPopup(locationMap[cameraId]);
+                }
+            });
+        }
+
+        // Check for alerts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(checkForAlerts, 1000);
+        });
+
+        // Emergency Button Functions
+        function callPolice() {
+            const policePhone = document.getElementById('police-phone')?.value || 'Not configured';
+            const incidentDescription = document.getElementById('incident-description').textContent;
+            
+            alert(`🚨 CALLING LOCAL POLICE\n\nDispatch Info:\nPolice Phone: ${policePhone}\nIncident: ${incidentDescription}\n\nIn a real implementation, this would initiate an emergency call.`);
+        }
+
+        function generateReport() {
+            const incidentDescription = document.getElementById('incident-description').textContent;
+            const timestamp = new Date().toISOString();
+            
+            alert(`📄 INCIDENT REPORT GENERATED\n\nTimestamp: ${timestamp}\nIncident Description: ${incidentDescription}\n\nIn a real implementation, this would generate and download a PDF report.`);
         }
 
         // Load incidents from localStorage on page load

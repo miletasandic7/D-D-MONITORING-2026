@@ -245,11 +245,51 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        function handleLogin(event) {
+        // Initialize Supabase client
+        const supabaseUrl = 'https://qskedgnkckgmwwxtduqt.supabase.co';
+        const supabaseKey = 'sb_publishable_UA7h7UDvMyjrkUjlNcWh3A_nrK3PGuF';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function handleLogin(event) {
             event.preventDefault();
-            // Redirect to main dashboard
-            window.location.href = 'dashboard.html';
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // Query the users table to check credentials
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('password', password)
+                    .single();
+                
+                if (error) {
+                    // User not found or credentials don't match
+                    alert('Invalid Credentials');
+                    return;
+                }
+                
+                if (data) {
+                    // Credentials match - redirect to dashboard
+                    // Store user info in localStorage for dashboard use
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        email: data.email,
+                        role: data.role,
+                        name: data.name
+                    }));
+                    
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Invalid Credentials');
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('Invalid Credentials');
+            }
         }
     </script>
 </body>
