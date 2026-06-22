@@ -246,6 +246,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         // Initialize Supabase client
         const supabaseUrl = 'https://qskedgnkckgmwwxtduqt.supabase.co';
@@ -259,32 +260,41 @@
             const password = document.getElementById('password').value;
             
             try {
-                // Query the users table to check credentials
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('email', email)
-                    .eq('password', password)
-                    .single();
+                // Use official Supabase authentication method
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
                 
                 if (error) {
-                    // User not found or credentials don't match
+                    // Authentication failed
                     alert('Invalid Credentials');
                     return;
                 }
                 
-                if (data) {
-                    // Credentials match - redirect to dashboard
+                if (data.user) {
+                    // Authentication successful
+                    // Get user role from users table
+                    const { data: userData, error: userError } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('email', email)
+                        .single();
+                    
+                    if (userError || !userData) {
+                        alert('User profile not found');
+                        await supabase.auth.signOut();
+                        return;
+                    }
+                    
                     // Store user info in localStorage for dashboard use
                     localStorage.setItem('currentUser', JSON.stringify({
-                        email: data.email,
-                        role: data.role,
-                        name: data.name
+                        email: userData.email,
+                        role: userData.role,
+                        name: userData.name
                     }));
                     
                     window.location.href = 'dashboard.html';
-                } else {
-                    alert('Invalid Credentials');
                 }
             } catch (err) {
                 console.error('Login error:', err);

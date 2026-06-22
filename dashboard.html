@@ -7,6 +7,7 @@
     <title>D&D Global AI Surveillance Platform</title>
     <link href="css2.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1126,6 +1127,16 @@
             border-color: #4a4a50;
         }
 
+        .emergency-button.download {
+            border-color: #3a3a40;
+            color: #707070;
+        }
+
+        .emergency-button.download:hover {
+            background-color: #0d0d10;
+            border-color: #4a4a50;
+        }
+
         /* Simple Camera List */
         .camera-list-simple {
             display: flex;
@@ -1738,6 +1749,7 @@
                 <div class="emergency-buttons-section">
                     <button class="emergency-button police" onclick="callPolice()">🚨 CALL LOCAL POLICE (DISPATCH INFO)</button>
                     <button class="emergency-button report" onclick="generateReport()">📄 GENERATE INCIDENT REPORT</button>
+                    <button class="emergency-button download" onclick="downloadPDF()">📥 DOWNLOAD REPORT PDF</button>
                 </div>
 
                 <div class="camera-directory">
@@ -3046,6 +3058,43 @@
             const timestamp = new Date().toISOString();
             
             alert(`📄 INCIDENT REPORT GENERATED\n\nTimestamp: ${timestamp}\nIncident Description: ${incidentDescription}\n\nIn a real implementation, this would generate and download a PDF report.`);
+        }
+
+        function downloadPDF() {
+            const incidentDescription = document.getElementById('incident-description').textContent;
+            const timestamp = new Date().toISOString();
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.setTextColor(0, 0, 0);
+                doc.text('INCIDENT REPORT', 105, 20, { align: 'center' });
+                
+                // Add timestamp
+                doc.setFontSize(12);
+                doc.text(`Generated: ${timestamp}`, 20, 40);
+                
+                // Add incident description
+                doc.setFontSize(11);
+                const splitText = doc.splitTextToSize(incidentDescription, 170);
+                doc.text('Incident Description:', 20, 60);
+                doc.text(splitText, 20, 70);
+                
+                // Add footer
+                doc.setFontSize(9);
+                doc.text('D&D Global AI Surveillance Platform', 105, 280, { align: 'center' });
+                
+                // Save the PDF
+                doc.save(`incident-report-${timestamp.replace(/[:.]/g, '-')}.pdf`);
+                
+                console.log('PDF downloaded successfully');
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                alert('PDF generation failed. Please try again.');
+            }
         }
 
         // Load incidents from localStorage on page load
