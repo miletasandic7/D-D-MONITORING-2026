@@ -784,6 +784,190 @@
             color: #ffffff;
         }
 
+        /* PTZ Controls Overlay */
+        .ptz-controls {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid #2D3748;
+            border-radius: 8px;
+            padding: 12px;
+            display: none;
+            z-index: 20;
+        }
+
+        .camera-feed:hover .ptz-controls {
+            display: block;
+        }
+
+        .ptz-directional {
+            display: grid;
+            grid-template-columns: repeat(3, 32px);
+            grid-template-rows: repeat(3, 32px);
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .ptz-btn {
+            background-color: #1A1D24;
+            border: 1px solid #2D3748;
+            color: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .ptz-btn:hover {
+            background-color: #2D3748;
+            border-color: #4A5568;
+        }
+
+        .ptz-btn:active {
+            background-color: #4A5568;
+        }
+
+        .ptz-slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ptz-slider-label {
+            font-size: 10px;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ptz-slider {
+            width: 100%;
+            height: 4px;
+            background-color: #2D3748;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .ptz-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Camera Presets Dropdown */
+        .camera-presets {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid #2D3748;
+            border-radius: 6px;
+            padding: 4px;
+            display: none;
+            z-index: 20;
+        }
+
+        .camera-feed:hover .camera-presets {
+            display: block;
+        }
+
+        .preset-select {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .preset-select:focus {
+            border-color: #4A5568;
+        }
+
+        /* Stream Profile Toggle */
+        .stream-toggle {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid #2D3748;
+            border-radius: 4px;
+            padding: 4px 8px;
+            display: none;
+            z-index: 15;
+            font-size: 10px;
+            color: #9CA3AF;
+            cursor: pointer;
+        }
+
+        .camera-feed:hover .stream-toggle {
+            display: block;
+        }
+
+        .stream-toggle.main {
+            color: #10B981;
+        }
+
+        .stream-toggle.sub {
+            color: #F59E0B;
+        }
+
+        /* Snapshot and Record Buttons */
+        .camera-actions {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 8px;
+            display: none;
+            z-index: 15;
+        }
+
+        .camera-feed:hover .camera-actions {
+            display: flex;
+        }
+
+        .action-btn {
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid #2D3748;
+            color: #ffffff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(45, 55, 72, 0.8);
+            border-color: #4A5568;
+        }
+
+        .action-btn.recording {
+            background-color: rgba(239, 68, 68, 0.6);
+            border-color: #EF4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        .action-btn.snapshot:hover {
+            background-color: rgba(16, 185, 129, 0.6);
+            border-color: #10B981;
+        }
+
         .action-buttons-vertical {
             display: flex;
             flex-direction: column;
@@ -1637,6 +1821,7 @@
                 </div>
                 <div class="camera-grid layout-3x3" id="camera-grid">
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1645,6 +1830,39 @@
                             <div class="camera-timestamp" id="timestamp-1">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-01')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-01 Main Entrance</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1653,6 +1871,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active alert">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1662,6 +1881,39 @@
                             <div class="camera-timestamp" id="timestamp-2">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-02')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-02 Parking Lot</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1670,6 +1922,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1678,6 +1931,39 @@
                             <div class="camera-timestamp" id="timestamp-3">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-03')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-03 Lobby</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1686,6 +1972,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active alert">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1695,6 +1982,39 @@
                             <div class="camera-timestamp" id="timestamp-4">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-04')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-04 Server Room</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1703,6 +2023,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1711,6 +2032,39 @@
                             <div class="camera-timestamp" id="timestamp-5">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-05')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-05 Warehouse A</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1719,6 +2073,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1727,6 +2082,39 @@
                             <div class="camera-timestamp" id="timestamp-6">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-06')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-06 Warehouse B</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1735,6 +2123,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1743,6 +2132,39 @@
                             <div class="camera-timestamp" id="timestamp-7">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-07')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-07 Loading Dock</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1751,6 +2173,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1759,6 +2182,39 @@
                             <div class="camera-timestamp" id="timestamp-8">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-08')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-08 Perimeter North</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1767,6 +2223,7 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
                         <div class="camera-overlay">
                             <div class="status-indicators">
                                 <span class="status-dot recording"></span>
@@ -1775,6 +2232,39 @@
                             <div class="camera-timestamp" id="timestamp-9">00:00:00</div>
                         </div>
                         <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
+                        <div class="camera-actions">
+                            <button class="action-btn snapshot" onclick="takeSnapshot('CAM-09')">📷</button>
+                            <button class="action-btn" onclick="toggleRecording(this)">⏺</button>
+                        </div>
+                        <div class="ptz-controls">
+                            <div class="ptz-directional">
+                                <button class="ptz-btn" onclick="ptzMove('up-left')">↖</button>
+                                <button class="ptz-btn" onclick="ptzMove('up')">↑</button>
+                                <button class="ptz-btn" onclick="ptzMove('up-right')">↗</button>
+                                <button class="ptz-btn" onclick="ptzMove('left')">←</button>
+                                <button class="ptz-btn" onclick="ptzHome()">⌂</button>
+                                <button class="ptz-btn" onclick="ptzMove('right')">→</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-left')">↙</button>
+                                <button class="ptz-btn" onclick="ptzMove('down')">↓</button>
+                                <button class="ptz-btn" onclick="ptzMove('down-right')">↘</button>
+                            </div>
+                            <div class="ptz-slider-group">
+                                <div class="ptz-slider-label"><span>Zoom</span><span>50%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="50" oninput="updateSlider(this, 'zoom')">
+                                <div class="ptz-slider-label"><span>Focus</span><span>75%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="75" oninput="updateSlider(this, 'focus')">
+                                <div class="ptz-slider-label"><span>Iris</span><span>60%</span></div>
+                                <input type="range" class="ptz-slider" min="0" max="100" value="60" oninput="updateSlider(this, 'iris')">
+                            </div>
+                        </div>
+                        <div class="camera-presets">
+                            <select class="preset-select" onchange="applyPreset(this)">
+                                <option value="">Preset</option>
+                                <option value="entrance">Entrance</option>
+                                <option value="parking">Parking</option>
+                                <option value="lobby">Lobby</option>
+                            </select>
+                        </div>
                         <div class="camera-label">CAM-09 Perimeter South</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -2358,6 +2848,76 @@
                 // 3. Add the view to the favorites panel
                 
                 alert(`View "${viewName}" created!`);
+            }
+        }
+
+        // Phase 3 UI Enhancement Functions
+        function ptzMove(direction) {
+            // Simulate PTZ movement
+            console.log(`PTZ moving: ${direction}`);
+            // In a real implementation, this would send PTZ commands to the camera
+        }
+
+        function ptzHome() {
+            console.log('PTZ returning to home position');
+            // In a real implementation, this would send home command to the camera
+        }
+
+        function updateSlider(slider, type) {
+            const value = slider.value;
+            const label = slider.previousElementSibling;
+            label.querySelector('span:last-child').textContent = `${value}%`;
+            console.log(`${type} adjusted to ${value}%`);
+            // In a real implementation, this would send slider commands to the camera
+        }
+
+        function toggleStream(button) {
+            button.classList.toggle('main');
+            button.classList.toggle('sub');
+            
+            if (button.classList.contains('main')) {
+                button.textContent = 'HD';
+                button.style.color = '#10B981';
+                console.log('Switched to Main Stream (HD)');
+            } else {
+                button.textContent = 'SD';
+                button.style.color = '#F59E0B';
+                console.log('Switched to Sub Stream (Low Bandwidth)');
+            }
+            // In a real implementation, this would switch the actual video stream
+        }
+
+        function takeSnapshot(cameraId) {
+            const timestamp = new Date().toISOString();
+            console.log(`Snapshot taken for ${cameraId} at ${timestamp}`);
+            
+            // Simulate snapshot download
+            alert(`Snapshot saved for ${cameraId}\nTimestamp: ${timestamp}`);
+            
+            // In a real implementation, this would:
+            // 1. Capture the current video frame
+            // 2. Save it as an image file
+            // 3. Log the snapshot event to the database
+        }
+
+        function toggleRecording(button) {
+            button.classList.toggle('recording');
+            
+            if (button.classList.contains('recording')) {
+                console.log('Recording started');
+                // In a real implementation, this would start recording
+            } else {
+                console.log('Recording stopped');
+                // In a real implementation, this would stop recording and save the file
+            }
+        }
+
+        function applyPreset(select) {
+            const preset = select.value;
+            if (preset) {
+                console.log(`Applying preset: ${preset}`);
+                alert(`Camera preset applied: ${preset}`);
+                // In a real implementation, this would send PTZ preset command to the camera
             }
         }
 
