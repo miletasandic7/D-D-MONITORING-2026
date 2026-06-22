@@ -14,13 +14,15 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0a0f;
-            color: #e0e0e0;
-            height: 100vh;
-            overflow: hidden;
             margin: 0;
             padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #05050a;
+            font-family: 'Inter', sans-serif;
+            color: #e0e0e0;
         }
 
         .container {
@@ -31,6 +33,46 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+        }
+
+        /* Main container holding the 3 columns side-by-side */
+        .main-content-wrapper {
+            display: flex !important;
+            flex-direction: row !important;
+            height: calc(100vh - 140px) !important;
+            width: 100vw !important;
+            overflow: hidden !important;
+        }
+
+        /* LEFT SIDEBAR: Stacked items one below the other */
+        .left-sidebar-panel {
+            width: 380px !important;
+            min-width: 380px !important;
+            height: 100% !important;
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px;
+            padding: 15px;
+            border-right: 2px solid #00f0ff;
+        }
+
+        /* CENTER: The 3x3 Camera Grid */
+        .camera-grid-center {
+            flex: 1 !important;
+            height: 100% !important;
+            overflow-y: auto !important;
+            padding: 15px;
+        }
+
+        /* RIGHT SIDEBAR: PayPal Billing */
+        .right-billing-sidebar {
+            width: 340px !important;
+            min-width: 340px !important;
+            height: 100% !important;
+            overflow-y: auto !important;
+            padding: 15px;
+            border-left: 2px solid #00f0ff;
         }
 
         header {
@@ -897,8 +939,8 @@
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="timeline-section">
+        <div class="main-content-wrapper">
+            <div class="left-sidebar-panel">
                 <div class="settings-section">
                     <h2 class="section-title">Platform Settings & Controls</h2>
                     <div class="settings-controls">
@@ -986,7 +1028,7 @@
                 </div>
             </div>
 
-            <div class="camera-section">
+            <div class="camera-grid-center">
                 <h2 class="section-title">Live Camera Feeds</h2>
                 <div class="camera-grid">
                     <div class="camera-feed active">
@@ -1064,7 +1106,7 @@
                 </div>
             </div>
 
-            <div class="billing-section">
+            <div class="right-billing-sidebar">
                 <h2 class="section-title">Subscription Plans</h2>
                 <div class="emergency-contact-form">
                     <div class="emergency-title">Emergency Contact Registry</div>
