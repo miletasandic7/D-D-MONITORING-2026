@@ -258,6 +258,17 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
+            // Temporary hardcoded admin bypass for testing
+            if (email === 'admin@monitoring.com' && password === '12345') {
+                localStorage.setItem('currentUser', JSON.stringify({
+                    email: email,
+                    role: 'admin',
+                    name: 'Admin User'
+                }));
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            
             try {
                 // Use official Supabase authentication method
                 const { data, error } = await supabase.auth.signInWithPassword({
