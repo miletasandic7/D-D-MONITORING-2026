@@ -987,6 +987,19 @@
             text-align: center;
         }
 
+        /* Form validation states */
+        .form-field input.valid {
+            border-color: #10B981;
+        }
+
+        .form-field input.invalid {
+            border-color: #EF4444;
+        }
+
+        .compliance-status.compliant {
+            color: #10B981;
+        }
+
         .action-btn-vertical:hover {
             border-color: #4A5568;
         }
@@ -2891,6 +2904,19 @@
             const timestamp = new Date().toISOString();
             console.log(`Snapshot taken for ${cameraId} at ${timestamp}`);
             
+            // Create log entry for snapshot
+            const logEntry = {
+                camera_id: cameraId,
+                event_type: 'SNAPSHOT',
+                location: cameraId,
+                description: `Manual snapshot captured by operator`,
+                is_alert: false,
+                created_at: timestamp
+            };
+            
+            // Add to timeline
+            addLogEntryToTimeline(logEntry);
+            
             // Simulate snapshot download
             alert(`Snapshot saved for ${cameraId}\nTimestamp: ${timestamp}`);
             
@@ -2902,14 +2928,62 @@
 
         function toggleRecording(button) {
             button.classList.toggle('recording');
+            const cameraFeed = button.closest('.camera-feed');
+            const cameraLabel = cameraFeed.querySelector('.camera-label').textContent;
             
             if (button.classList.contains('recording')) {
                 console.log('Recording started');
-                // In a real implementation, this would start recording
+                
+                // Create log entry for recording start
+                const logEntry = {
+                    camera_id: cameraLabel.split(' ')[0],
+                    event_type: 'RECORDING START',
+                    location: cameraLabel,
+                    description: `Manual recording started by operator`,
+                    is_alert: false,
+                    created_at: new Date().toISOString()
+                };
+                
+                addLogEntryToTimeline(logEntry);
             } else {
                 console.log('Recording stopped');
-                // In a real implementation, this would stop recording and save the file
+                
+                // Create log entry for recording stop
+                const logEntry = {
+                    camera_id: cameraLabel.split(' ')[0],
+                    event_type: 'RECORDING STOP',
+                    location: cameraLabel,
+                    description: `Manual recording stopped by operator`,
+                    is_alert: false,
+                    created_at: new Date().toISOString()
+                };
+                
+                addLogEntryToTimeline(logEntry);
             }
+        }
+
+        function addLogEntryToTimeline(logEntry) {
+            const timelineContainer = document.querySelector('.timeline-container');
+            
+            const eventElement = document.createElement('div');
+            eventElement.className = `timeline-event ${logEntry.is_alert ? 'alert' : ''}`;
+            eventElement.dataset.camera = logEntry.camera_id || '';
+            eventElement.dataset.location = logEntry.location || '';
+            eventElement.dataset.id = Date.now(); // Temporary ID
+
+            eventElement.innerHTML = `
+                <div class="event-time">${logEntry.created_at || new Date().toISOString()}</div>
+                <div class="event-type">${logEntry.event_type || 'UNKNOWN'}</div>
+                <div class="event-location">📍 ${logEntry.location || 'Unknown Location'}</div>
+                <div class="event-description" contenteditable="true" data-original="${logEntry.description || ''}">${logEntry.description || 'No description'}</div>
+                <div class="edit-hint">Click to edit description</div>
+            `;
+
+            // Insert at the top of the timeline
+            timelineContainer.insertBefore(eventElement, timelineContainer.firstChild);
+            
+            // Re-attach event listeners for editable descriptions
+            attachDescriptionListeners();
         }
 
         function applyPreset(select) {
