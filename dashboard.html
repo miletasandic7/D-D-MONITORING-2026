@@ -361,6 +361,238 @@
             line-height: 1.4;
         }
 
+        /* Grid Layout Selector */
+        .grid-layout-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .layout-btn {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #9CA3AF;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .layout-btn:hover {
+            border-color: #4A5568;
+            background-color: #1A1D24;
+        }
+
+        .layout-btn.active {
+            background-color: #1A1D24;
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
+        /* Camera Grid Layouts */
+        .camera-grid {
+            display: grid;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .camera-grid.layout-1x1 {
+            grid-template-columns: 1fr;
+        }
+
+        .camera-grid.layout-2x2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .camera-grid.layout-3x3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .camera-grid.layout-4x4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .camera-grid.layout-1plus5 {
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: repeat(3, 1fr);
+        }
+
+        .camera-grid.layout-1plus5 .camera-feed:first-child {
+            grid-row: span 3;
+        }
+
+        .camera-grid.layout-1plus7 {
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: repeat(4, 1fr);
+        }
+
+        .camera-grid.layout-1plus7 .camera-feed:first-child {
+            grid-row: span 4;
+        }
+
+        /* Status Overlays */
+        .camera-overlay {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.recording {
+            background-color: #EF4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.audio {
+            background-color: #10B981;
+        }
+
+        .status-dot.alert {
+            background-color: #EF4444;
+        }
+
+        .camera-timestamp {
+            font-size: 10px;
+            color: #9CA3AF;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        /* Full Screen Toggle */
+        .fullscreen-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: none;
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 15;
+            font-size: 12px;
+            display: none;
+        }
+
+        .camera-feed:hover .fullscreen-btn {
+            display: block;
+        }
+
+        /* Top Navigation Bar */
+        .top-navigation {
+            background-color: #1A1D24;
+            border: 1px solid #2D3748;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-tab {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #9CA3AF;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
+        .nav-tab.active {
+            background-color: #1A1D24;
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
+        .system-time {
+            font-size: 13px;
+            color: #9CA3AF;
+            font-family: 'Courier New', monospace;
+            background-color: #0A0C10;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #2D3748;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .profile-dropdown {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #9CA3AF;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .notification-bell {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #9CA3AF;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #EF4444;
+            color: #ffffff;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .action-buttons-vertical {
             display: flex;
             flex-direction: column;
@@ -1076,9 +1308,41 @@
             </div>
 
             <div class="camera-grid-center">
+                <div class="top-navigation">
+                    <div class="nav-tabs">
+                        <button class="nav-tab active" onclick="switchTab('live')">Live View</button>
+                        <button class="nav-tab" onclick="switchTab('playback')">Playback</button>
+                        <button class="nav-tab" onclick="switchTab('config')">Configuration</button>
+                    </div>
+                    <div class="system-time" id="system-time">00:00:00.000</div>
+                    <div class="user-profile">
+                        <div class="notification-bell">
+                            🔔
+                            <span class="notification-badge">3</span>
+                        </div>
+                        <div class="profile-dropdown">Admin ▼</div>
+                    </div>
+                </div>
+                
                 <h2 class="section-title">Live Camera Feeds</h2>
-                <div class="camera-grid">
+                <div class="grid-layout-selector">
+                    <button class="layout-btn active" onclick="setLayout('3x3')">3×3</button>
+                    <button class="layout-btn" onclick="setLayout('1x1')">1×1</button>
+                    <button class="layout-btn" onclick="setLayout('2x2')">2×2</button>
+                    <button class="layout-btn" onclick="setLayout('4x4')">4×4</button>
+                    <button class="layout-btn" onclick="setLayout('1plus5')">1+5</button>
+                    <button class="layout-btn" onclick="setLayout('1plus7')">1+7</button>
+                </div>
+                <div class="camera-grid layout-3x3" id="camera-grid">
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-1">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-01 Main Entrance</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1087,6 +1351,15 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active alert">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                                <span class="status-dot alert"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-2">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-02 Parking Lot</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1095,6 +1368,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-3">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-03 Lobby</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1103,6 +1384,15 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active alert">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                                <span class="status-dot alert"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-4">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-04 Server Room</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1111,6 +1401,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-5">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-05 Warehouse A</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1119,6 +1417,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-6">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-06 Warehouse B</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1127,6 +1433,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-7">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-07 Loading Dock</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1135,6 +1449,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-8">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-08 Perimeter North</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1143,6 +1465,14 @@
                         <div class="camera-placeholder">📹 Camera Feed</div>
                     </div>
                     <div class="camera-feed active">
+                        <div class="camera-overlay">
+                            <div class="status-indicators">
+                                <span class="status-dot recording"></span>
+                                <span class="status-dot audio"></span>
+                            </div>
+                            <div class="camera-timestamp" id="timestamp-9">00:00:00</div>
+                        </div>
+                        <button class="fullscreen-btn" onclick="toggleFullscreen(this)">⛶</button>
                         <div class="camera-label">CAM-09 Perimeter South</div>
                         <div class="camera-status">
                             <div class="camera-status-dot"></div>
@@ -1573,6 +1903,77 @@
 
         // Call initializeDashboard when page loads
         window.addEventListener('DOMContentLoaded', initializeDashboard);
+
+        // Phase 1 UI Enhancement Functions
+        function setLayout(layout) {
+            const cameraGrid = document.getElementById('camera-grid');
+            const buttons = document.querySelectorAll('.layout-btn');
+            
+            // Remove all layout classes
+            cameraGrid.classList.remove('layout-1x1', 'layout-2x2', 'layout-3x3', 'layout-4x4', 'layout-1plus5', 'layout-1plus7');
+            
+            // Add selected layout class
+            cameraGrid.classList.add(`layout-${layout}`);
+            
+            // Update button states
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Tab switching logic would go here
+            // For now, just visual feedback
+            console.log(`Switched to ${tab} tab`);
+        }
+
+        function toggleFullscreen(button) {
+            const cameraFeed = button.closest('.camera-feed');
+            
+            if (!document.fullscreenElement) {
+                cameraFeed.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function updateSystemTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+            document.getElementById('system-time').textContent = timeString;
+        }
+
+        function updateCameraTimestamps() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            });
+            
+            for (let i = 1; i <= 9; i++) {
+                const timestamp = document.getElementById(`timestamp-${i}`);
+                if (timestamp) {
+                    timestamp.textContent = timeString;
+                }
+            }
+        }
+
+        // Start time updates
+        setInterval(updateSystemTime, 50); // Update every 50ms for milliseconds
+        setInterval(updateCameraTimestamps, 1000); // Update every second
 
         // Load incidents from localStorage on page load
         function loadIncidents() {
