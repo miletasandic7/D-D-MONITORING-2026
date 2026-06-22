@@ -593,6 +593,197 @@
             justify-content: center;
         }
 
+        /* Device Tree Navigation */
+        .device-tree-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .search-bar {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #ffffff;
+            font-size: 12px;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-bar:focus {
+            border-color: #4A5568;
+        }
+
+        .search-bar::placeholder {
+            color: #6B7280;
+        }
+
+        .favorites-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .favorites-tab {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            color: #9CA3AF;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .favorites-tab:hover {
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
+        .favorites-tab.active {
+            background-color: #1A1D24;
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
+        .device-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tree-node {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-size: 12px;
+        }
+
+        .tree-item:hover {
+            background-color: #1A1D24;
+        }
+
+        .tree-item.selected {
+            background-color: #1A1D24;
+            border: 1px solid #4A5568;
+        }
+
+        .tree-toggle {
+            color: #9CA3AF;
+            cursor: pointer;
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-icon {
+            color: #9CA3AF;
+            font-size: 12px;
+        }
+
+        .tree-label {
+            color: #ffffff;
+            flex: 1;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.online {
+            background-color: #10B981;
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-indicator.offline {
+            background-color: #EF4444;
+        }
+
+        .alarm-badge {
+            background-color: #EF4444;
+            color: #ffffff;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .tree-children {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .tree-children.expanded {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .saved-views {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .saved-view-item {
+            background-color: #0A0C10;
+            border: 1px solid #2D3748;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .saved-view-item:hover {
+            border-color: #4A5568;
+        }
+
+        .saved-view-name {
+            font-size: 12px;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .saved-view-cameras {
+            font-size: 10px;
+            color: #9CA3AF;
+        }
+
+        .add-view-btn {
+            background-color: #0A0C10;
+            border: 1px dashed #2D3748;
+            color: #9CA3AF;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .add-view-btn:hover {
+            border-color: #4A5568;
+            color: #ffffff;
+        }
+
         .action-buttons-vertical {
             display: flex;
             flex-direction: column;
@@ -1241,17 +1432,128 @@
                 </div>
 
                 <div class="camera-directory">
-                    <h2 class="section-title">Camera Directory List</h2>
-                    <div class="camera-list">
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-01')">CAM-01 Main Entrance</div>
-                        <div class="camera-list-item alert" onclick="highlightCamera('CAM-02')">CAM-02 Parking Lot ⚠️</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-03')">CAM-03 Lobby</div>
-                        <div class="camera-list-item alert" onclick="highlightCamera('CAM-04')">CAM-04 Server Room ⚠️</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-05')">CAM-05 Warehouse A</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-06')">CAM-06 Warehouse B</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-07')">CAM-07 Loading Dock</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-08')">CAM-08 Perimeter North</div>
-                        <div class="camera-list-item" onclick="highlightCamera('CAM-09')">CAM-09 Perimeter South</div>
+                    <h2 class="section-title">Device Navigation</h2>
+                    <div class="device-tree-container">
+                        <input type="text" class="search-bar" placeholder="🔍 Search cameras by name or IP..." id="camera-search" oninput="filterCameras()">
+                        
+                        <div class="favorites-tabs">
+                            <button class="favorites-tab active" onclick="switchFavoritesTab('tree')">Device Tree</button>
+                            <button class="favorites-tab" onclick="switchFavoritesTab('favorites')">Favorites</button>
+                        </div>
+                        
+                        <div id="device-tree-panel" class="device-tree">
+                            <div class="tree-node">
+                                <div class="tree-item" onclick="toggleTreeNode(this)">
+                                    <span class="tree-toggle expanded">▶</span>
+                                    <span class="tree-icon">🏢</span>
+                                    <span class="tree-label">Main Facility</span>
+                                    <span class="alarm-badge">2</span>
+                                </div>
+                                <div class="tree-children expanded">
+                                    <div class="tree-node">
+                                        <div class="tree-item" onclick="toggleTreeNode(this)">
+                                            <span class="tree-toggle expanded">▶</span>
+                                            <span class="tree-icon">🚪</span>
+                                            <span class="tree-label">Entrance Zone</span>
+                                        </div>
+                                        <div class="tree-children expanded">
+                                            <div class="tree-item" onclick="selectCamera('CAM-01')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-01 Main Entrance</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                            <div class="tree-item" onclick="selectCamera('CAM-03')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-03 Lobby</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tree-node">
+                                        <div class="tree-item" onclick="toggleTreeNode(this)">
+                                            <span class="tree-toggle expanded">▶</span>
+                                            <span class="tree-icon">🚗</span>
+                                            <span class="tree-label">Parking Zone</span>
+                                            <span class="alarm-badge">1</span>
+                                        </div>
+                                        <div class="tree-children expanded">
+                                            <div class="tree-item" onclick="selectCamera('CAM-02')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-02 Parking Lot</span>
+                                                <span class="status-indicator online"></span>
+                                                <span class="alarm-badge">1</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tree-node">
+                                        <div class="tree-item" onclick="toggleTreeNode(this)">
+                                            <span class="tree-toggle expanded">▶</span>
+                                            <span class="tree-icon">🏭</span>
+                                            <span class="tree-label">Warehouse Zone</span>
+                                            <span class="alarm-badge">1</span>
+                                        </div>
+                                        <div class="tree-children expanded">
+                                            <div class="tree-item" onclick="selectCamera('CAM-04')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-04 Server Room</span>
+                                                <span class="status-indicator online"></span>
+                                                <span class="alarm-badge">1</span>
+                                            </div>
+                                            <div class="tree-item" onclick="selectCamera('CAM-05')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-05 Warehouse A</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                            <div class="tree-item" onclick="selectCamera('CAM-06')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-06 Warehouse B</span>
+                                                <span class="status-indicator offline"></span>
+                                            </div>
+                                            <div class="tree-item" onclick="selectCamera('CAM-07')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-07 Loading Dock</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tree-node">
+                                        <div class="tree-item" onclick="toggleTreeNode(this)">
+                                            <span class="tree-toggle expanded">▶</span>
+                                            <span class="tree-icon">🛡️</span>
+                                            <span class="tree-label">Perimeter Zone</span>
+                                        </div>
+                                        <div class="tree-children expanded">
+                                            <div class="tree-item" onclick="selectCamera('CAM-08')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-08 Perimeter North</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                            <div class="tree-item" onclick="selectCamera('CAM-09')">
+                                                <span class="tree-icon">📹</span>
+                                                <span class="tree-label">CAM-09 Perimeter South</span>
+                                                <span class="status-indicator online"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="favorites-panel" class="saved-views" style="display: none;">
+                            <div class="saved-view-item" onclick="loadSavedView('entrance')">
+                                <div class="saved-view-name">🚪 Entrance View</div>
+                                <div class="saved-view-cameras">CAM-01, CAM-03</div>
+                            </div>
+                            <div class="saved-view-item" onclick="loadSavedView('warehouse')">
+                                <div class="saved-view-name">🏭 Warehouse View</div>
+                                <div class="saved-view-cameras">CAM-04, CAM-05, CAM-06, CAM-07</div>
+                            </div>
+                            <div class="saved-view-item" onclick="loadSavedView('perimeter')">
+                                <div class="saved-view-name">🛡️ Perimeter View</div>
+                                <div class="saved-view-cameras">CAM-08, CAM-09</div>
+                            </div>
+                            <div class="add-view-btn" onclick="createNewView()">+ Create New View</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1974,6 +2276,90 @@
         // Start time updates
         setInterval(updateSystemTime, 50); // Update every 50ms for milliseconds
         setInterval(updateCameraTimestamps, 1000); // Update every second
+
+        // Phase 2 UI Enhancement Functions
+        function toggleTreeNode(element) {
+            const toggle = element.querySelector('.tree-toggle');
+            const children = element.nextElementSibling;
+            
+            if (children && children.classList.contains('tree-children')) {
+                toggle.classList.toggle('expanded');
+                children.classList.toggle('expanded');
+            }
+        }
+
+        function selectCamera(cameraId) {
+            // Remove previous selection
+            document.querySelectorAll('.tree-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.currentTarget.classList.add('selected');
+            
+            // Highlight corresponding camera in grid
+            highlightCamera(cameraId);
+        }
+
+        function filterCameras() {
+            const searchTerm = document.getElementById('camera-search').value.toLowerCase();
+            const treeItems = document.querySelectorAll('.tree-item');
+            
+            treeItems.forEach(item => {
+                const label = item.querySelector('.tree-label');
+                if (label) {
+                    const text = label.textContent.toLowerCase();
+                    const parent = item.closest('.tree-node');
+                    
+                    if (text.includes(searchTerm)) {
+                        parent.style.display = 'flex';
+                    } else {
+                        parent.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function switchFavoritesTab(tab) {
+            const tabs = document.querySelectorAll('.favorites-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const deviceTreePanel = document.getElementById('device-tree-panel');
+            const favoritesPanel = document.getElementById('favorites-panel');
+            
+            if (tab === 'tree') {
+                deviceTreePanel.style.display = 'flex';
+                favoritesPanel.style.display = 'none';
+            } else {
+                deviceTreePanel.style.display = 'none';
+                favoritesPanel.style.display = 'flex';
+            }
+        }
+
+        function loadSavedView(viewName) {
+            // Simulate loading a saved view
+            console.log(`Loading saved view: ${viewName}`);
+            
+            // In a real implementation, this would:
+            // 1. Get the list of cameras for this view
+            // 2. Update the camera grid to show only those cameras
+            // 3. Adjust the grid layout accordingly
+            
+            alert(`Loading ${viewName} view...`);
+        }
+
+        function createNewView() {
+            const viewName = prompt('Enter name for new view:');
+            if (viewName) {
+                // In a real implementation, this would:
+                // 1. Get currently selected cameras
+                // 2. Save them as a new view
+                // 3. Add the view to the favorites panel
+                
+                alert(`View "${viewName}" created!`);
+            }
+        }
 
         // Load incidents from localStorage on page load
         function loadIncidents() {
