@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#000000">
     <title>D&D Global AI Surveillance Platform</title>
     <link href="css2.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -323,6 +324,41 @@
             border-radius: 8px;
             padding: 12px;
             flex-shrink: 0;
+        }
+
+        .system-specs-panel {
+            background-color: #1A1D24;
+            border: 1px solid #2D3748;
+            border-radius: 8px;
+            padding: 12px;
+            flex-shrink: 0;
+        }
+
+        .specs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .spec-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px;
+            background-color: #0A0C10;
+            border-radius: 4px;
+            border: 1px solid #2D3748;
+        }
+
+        .spec-icon {
+            font-size: 14px;
+            color: #9CA3AF;
+        }
+
+        .spec-text {
+            font-size: 11px;
+            color: #ffffff;
+            line-height: 1.4;
         }
 
         .action-buttons-vertical {
@@ -987,6 +1023,48 @@
                     </div>
                 </div>
 
+                <div class="system-specs-panel">
+                    <h2 class="section-title">System Specifications</h2>
+                    <div class="specs-list" id="system-specs-list">
+                        <div class="spec-item">
+                            <span class="spec-icon">📹</span>
+                            <span class="spec-text">Indoor & Outdoor HD/4K Cameras</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">🌙</span>
+                            <span class="spec-text">Infrared Night Vision for Low-Light Environments</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">☁️</span>
+                            <span class="spec-text">Cloud or On-Site NVR Video Storage</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">🎯</span>
+                            <span class="spec-text">Motion-Activated Recording with Smart Alerts</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">📱</span>
+                            <span class="spec-text">Remote Viewing from Desktop or Mobile</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">🔐</span>
+                            <span class="spec-text">Integrated with Alarms & Access Control</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">🔔</span>
+                            <span class="spec-text">Live Notifications for Suspicious Activity</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">📊</span>
+                            <span class="spec-text">Scalable for Multi-Camera, Multi-Location Setups</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-icon">📋</span>
+                            <span class="spec-text">Event Archiving for Insurance & Incident Reports</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="action-buttons-panel">
                     <h2 class="section-title">Quick Actions</h2>
                     <div class="action-buttons-vertical">
@@ -1088,8 +1166,8 @@
                         <input type="tel" id="fire-phone" placeholder="Enter fire department phone number" oninput="validateEmergencyForm()">
                     </div>
                     <div class="form-field">
-                        <label for="security-phone">Internal Security/Guard Service Phone (Optional)</label>
-                        <input type="tel" id="security-phone" placeholder="Enter internal security phone number (optional)">
+                        <label for="guard-phone">Internal Security/Guard Service Phone (Optional)</label>
+                        <input type="tel" id="guard-phone" placeholder="Enter internal security phone number (optional)">
                     </div>
                     <div class="compliance-status" id="compliance-status">
                         ⚠️ Complete mandatory fields to enable checkout
@@ -1153,6 +1231,11 @@
 
     <script src="https://www.paypal.com/sdk/js?client-id=test&currency=USD"></script>
     <script>
+        // Supabase Client Initialization
+        const supabaseUrl = 'https://qskedgnkckgmwwxtduqt.supabase.co';
+        const supabaseKey = 'sb_publishable_UA7h7UDvMyjrkUjlNcWh3A_nrK3PGuF';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
         // PayPal Smart Buttons Integration
         paypal.Buttons({
             style: {
@@ -1171,7 +1254,9 @@
                 });
             },
             onApprove: function(data, actions) {
-                return actions.order.capture().then(function(details) {
+                return actions.order.capture().then(async function(details) {
+                    // Save compliance data on successful payment
+                    await saveEmergencyCompliance();
                     alert('Transaction completed by ' + details.payer.name.given_name);
                 });
             }
@@ -1194,7 +1279,9 @@
                 });
             },
             onApprove: function(data, actions) {
-                return actions.order.capture().then(function(details) {
+                return actions.order.capture().then(async function(details) {
+                    // Save compliance data on successful payment
+                    await saveEmergencyCompliance();
                     alert('Transaction completed by ' + details.payer.name.given_name);
                 });
             }
@@ -1217,11 +1304,89 @@
                 });
             },
             onApprove: function(data, actions) {
-                return actions.order.capture().then(function(details) {
+                return actions.order.capture().then(async function(details) {
+                    // Save compliance data on successful payment
+                    await saveEmergencyCompliance();
                     alert('Transaction completed by ' + details.payer.name.given_name);
                 });
             }
         }).render('#paypal-button-container-3');
+
+        // Fetch alarm events from Supabase
+        async function fetchAlarmEvents() {
+            try {
+                const { data, error } = await supabase
+                    .from('alarm_events')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Error fetching alarm events:', error);
+                return [];
+            }
+        }
+
+        // Render events from Supabase
+        async function renderEventsFromDatabase() {
+            const events = await fetchAlarmEvents();
+            const timelineContainer = document.querySelector('.timeline-container');
+            
+            if (events.length === 0) {
+                // If no events in database, keep existing hardcoded events
+                return;
+            }
+
+            timelineContainer.innerHTML = '';
+            
+            events.forEach(event => {
+                const eventElement = document.createElement('div');
+                eventElement.className = `timeline-event ${event.is_alert ? 'alert' : ''}`;
+                eventElement.dataset.camera = event.camera_id || '';
+                eventElement.dataset.location = event.location || '';
+                eventElement.dataset.id = event.id;
+
+                eventElement.innerHTML = `
+                    <div class="event-time">${event.created_at || new Date().toISOString()}</div>
+                    <div class="event-type">${event.event_type || 'UNKNOWN'}</div>
+                    <div class="event-location">📍 ${event.location || 'Unknown Location'}</div>
+                    <div class="event-description" contenteditable="true" data-original="${event.description || ''}">${event.description || 'No description'}</div>
+                    <div class="edit-hint">Click to edit description</div>
+                `;
+
+                timelineContainer.appendChild(eventElement);
+            });
+
+            // Re-attach event listeners for editable descriptions
+            attachDescriptionListeners();
+        }
+
+        // Attach event listeners for editable descriptions
+        function attachDescriptionListeners() {
+            const descriptions = document.querySelectorAll('.event-description');
+            
+            descriptions.forEach(desc => {
+                desc.addEventListener('focus', function() {
+                    this.dataset.originalText = this.innerText;
+                });
+
+                desc.addEventListener('blur', function() {
+                    if (this.innerText !== this.dataset.originalText) {
+                        this.style.borderColor = '#4A5568';
+                        this.style.backgroundColor = '#1A1D24';
+                    }
+                });
+
+                desc.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+        }
 
         // Timeline scroll functionality
         function scrollTimeline(direction) {
@@ -1258,63 +1423,156 @@
             });
         });
 
-        // Save all edits to local JSON file
-        function saveAllEdits() {
-            const incidents = [];
+        // Save all edits to Supabase
+        async function saveAllEdits() {
+            const descriptions = document.querySelectorAll('.event-description');
+            const updates = [];
+            
             descriptions.forEach(desc => {
                 const eventElement = desc.closest('.timeline-event');
-                const time = eventElement.querySelector('.event-time').innerText;
-                const type = eventElement.querySelector('.event-type').innerText;
-                const isAlert = eventElement.classList.contains('alert');
+                const eventId = eventElement.dataset.id;
+                const currentDescription = desc.innerText;
                 
-                incidents.push({
-                    time: time,
-                    type: type,
-                    description: desc.innerText,
-                    isAlert: isAlert,
-                    original: desc.dataset.original
-                });
-                
-                if (desc.style.borderColor === 'rgb(0, 255, 136)') {
-                    desc.style.borderColor = 'transparent';
-                    desc.style.background = 'rgba(0, 255, 255, 0.05)';
+                if (eventId && currentDescription !== desc.dataset.original) {
+                    updates.push({
+                        id: eventId,
+                        description: currentDescription
+                    });
+                    
+                    desc.style.borderColor = '#4A5568';
+                    desc.style.backgroundColor = '#1A1D24';
                 }
             });
-            
-            // Save to localStorage for persistence across refreshes
-            localStorage.setItem('incidents', JSON.stringify(incidents));
-            
-            // Create and download JSON file
-            const dataStr = JSON.stringify(incidents, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'incidents.json';
-            link.click();
-            URL.revokeObjectURL(url);
-            
-            alert('All changes saved successfully! incidents.json downloaded.');
+
+            if (updates.length === 0) {
+                alert('No changes to save.');
+                return;
+            }
+
+            try {
+                for (const update of updates) {
+                    const { error } = await supabase
+                        .from('alarm_events')
+                        .update({ description: update.description })
+                        .eq('id', update.id);
+
+                    if (error) throw error;
+                }
+
+                alert(`Successfully updated ${updates.length} event(s) in database.`);
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                alert('Error saving changes to database. Please try again.');
+            }
         }
 
-        // Dismiss alert function
-        function dismissAlert(button) {
+        // Dismiss alert function with Supabase update
+        async function dismissAlert(button) {
             const eventElement = button.closest('.timeline-event');
+            const eventId = eventElement.dataset.id;
             const cameraId = eventElement.dataset.camera;
             
-            // Remove alert styling from timeline event
-            eventElement.classList.remove('alert');
-            button.remove();
-            
-            // Find and clear alert from corresponding camera feed
-            const cameraFeeds = document.querySelectorAll('.camera-feed');
-            cameraFeeds.forEach(feed => {
-                const label = feed.querySelector('.camera-label').innerText;
-                if (label.includes(cameraId)) {
-                    feed.classList.remove('alert');
+            try {
+                // Update is_alert status in Supabase
+                if (eventId) {
+                    const { error } = await supabase
+                        .from('alarm_events')
+                        .update({ is_alert: false })
+                        .eq('id', eventId);
+
+                    if (error) throw error;
                 }
-            });
+
+                // Remove alert styling from timeline event
+                eventElement.classList.remove('alert');
+                button.remove();
+                
+                // Find and clear alert from corresponding camera feed
+                const cameraFeeds = document.querySelectorAll('.camera-feed');
+                cameraFeeds.forEach(feed => {
+                    const label = feed.querySelector('.camera-label').innerText;
+                    if (label.includes(cameraId)) {
+                        feed.classList.remove('alert');
+                    }
+                });
+
+                alert('Alert dismissed successfully.');
+            } catch (error) {
+                console.error('Error dismissing alert:', error);
+                alert('Error dismissing alert. Please try again.');
+            }
         }
+
+        // Save emergency compliance data to Supabase
+        async function saveEmergencyCompliance() {
+            const policePhone = document.getElementById('police-phone').value;
+            const firePhone = document.getElementById('fire-phone').value;
+            const guardPhone = document.getElementById('guard-phone').value;
+
+            if (!policePhone || !firePhone) {
+                alert('Please fill in required fields (Police and Fire Department phone numbers).');
+                return false;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('client_compliance')
+                    .insert([{
+                        police_phone: policePhone,
+                        fire_phone: firePhone,
+                        guard_phone: guardPhone,
+                        created_at: new Date().toISOString()
+                    }]);
+
+                if (error) throw error;
+
+                alert('Emergency contact information saved successfully.');
+                return true;
+            } catch (error) {
+                console.error('Error saving compliance data:', error);
+                alert('Error saving emergency contact information. Please try again.');
+                return false;
+            }
+        }
+
+        // Initialize dashboard with database data
+        async function initializeDashboard() {
+            await renderEventsFromDatabase();
+            await loadSystemSpecs();
+        }
+
+        // Load system specifications from Supabase
+        async function loadSystemSpecs() {
+            try {
+                const { data, error } = await supabase
+                    .from('system_specs')
+                    .select('*');
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    // Render specs from database
+                    const specsList = document.getElementById('system-specs-list');
+                    specsList.innerHTML = '';
+                    
+                    data.forEach(spec => {
+                        const specItem = document.createElement('div');
+                        specItem.className = 'spec-item';
+                        specItem.innerHTML = `
+                            <span class="spec-icon">${spec.icon || '📹'}</span>
+                            <span class="spec-text">${spec.specification}</span>
+                        `;
+                        specsList.appendChild(specItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading system specs:', error);
+                // Keep default hardcoded specs if database fetch fails
+            }
+        }
+
+        // Call initializeDashboard when page loads
+        window.addEventListener('DOMContentLoaded', initializeDashboard);
 
         // Load incidents from localStorage on page load
         function loadIncidents() {
@@ -1476,6 +1734,8 @@ Report Generated Automatically by D&D Global AI Platform.`;
                 });
                 complianceStatus.classList.add('compliant');
                 complianceStatus.innerHTML = '✅ Compliance verified - Checkout enabled';
+                // Auto-save compliance data when valid
+                saveEmergencyCompliance();
             } else {
                 paypalContainers.forEach(container => {
                     container.classList.add('disabled');
