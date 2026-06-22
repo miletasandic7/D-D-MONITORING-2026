@@ -8,6 +8,7 @@
     <link href="css2.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * {
             margin: 0;
@@ -259,6 +260,16 @@
             color: #404040;
             font-size: 11px;
             text-align: center;
+        }
+
+        .camera-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background-color: #000;
         }
 
         .settings-section {
@@ -1894,7 +1905,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-01" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active alert">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -1945,7 +1956,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-02" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -1995,7 +2006,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-03" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active alert">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2046,7 +2057,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-04" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2096,7 +2107,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-05" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2146,7 +2157,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-06" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2196,7 +2207,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-07" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2246,7 +2257,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-08" class="camera-video" autoplay muted playsinline></video>
                     </div>
                     <div class="camera-feed active">
                         <div class="stream-toggle main" onclick="toggleStream(this)">HD</div>
@@ -2296,7 +2307,7 @@
                             <div class="camera-status-dot"></div>
                             <span>LIVE</span>
                         </div>
-                        <div class="camera-placeholder">📹 Camera Feed</div>
+                        <video id="video-cam-09" class="camera-video" autoplay muted playsinline></video>
                     </div>
                 </div>
             </div>
@@ -3040,8 +3051,166 @@
             });
         }
 
-        // Check for alerts on page load
+        // PTZ Control Functions
+        function ptzMove(direction) {
+            console.log(`PTZ Move: ${direction}`);
+            // In a real implementation, this would send PTZ commands to the camera
+            // For now, we'll simulate the action
+            const cameraFeed = event.target.closest('.camera-feed');
+            const cameraLabel = cameraFeed.querySelector('.camera-label').textContent;
+            console.log(`Moving ${cameraLabel} ${direction}`);
+        }
+
+        function ptzHome() {
+            console.log('PTZ Home');
+            // In a real implementation, this would return the camera to home position
+        }
+
+        function updateSlider(sliderId, value) {
+            console.log(`${sliderId}: ${value}`);
+            // In a real implementation, this would adjust camera settings
+        }
+
+        function toggleStream(element) {
+            const quality = element.textContent;
+            element.textContent = quality === 'HD' ? 'SD' : 'HD';
+            console.log(`Stream quality toggled to: ${element.textContent}`);
+            // In a real implementation, this would switch between HD/SD streams
+        }
+
+        function takeSnapshot(cameraId) {
+            console.log(`Snapshot taken for ${cameraId}`);
+            // In a real implementation, this would capture the current frame
+            addLogEntryToTimeline(cameraId, 'SNAPSHOT', 'Manual snapshot captured');
+        }
+
+        function toggleRecording(button) {
+            const isRecording = button.classList.contains('recording');
+            button.classList.toggle('recording');
+            button.textContent = isRecording ? '⏺' : '⏹';
+            console.log(`Recording ${isRecording ? 'stopped' : 'started'}`);
+            // In a real implementation, this would start/stop recording
+            const cameraFeed = button.closest('.camera-feed');
+            const cameraLabel = cameraFeed.querySelector('.camera-label').textContent;
+            addLogEntryToTimeline(cameraLabel.split(' ')[0], isRecording ? 'RECORDING STOPPED' : 'RECORDING STARTED', 'Manual recording toggle');
+        }
+
+        function applyPreset(preset) {
+            console.log(`Preset applied: ${preset}`);
+            // In a real implementation, this would move camera to preset position
+        }
+
+        // Grid Layout Selector Function
+        function setLayout(layout) {
+            const cameraGrid = document.querySelector('.camera-grid');
+            const layoutBtns = document.querySelectorAll('.layout-btn');
+            
+            // Update active button state
+            layoutBtns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update grid layout
+            cameraGrid.classList.remove('layout-1x1', 'layout-2x2', 'layout-3x3');
+            cameraGrid.classList.add(`layout-${layout}`);
+            
+            // Show/hide cameras based on layout
+            const cameraFeeds = document.querySelectorAll('.camera-feed');
+            const visibleCount = layout === '1x1' ? 1 : layout === '2x2' ? 4 : 9;
+            
+            cameraFeeds.forEach((feed, index) => {
+                if (index < visibleCount) {
+                    feed.style.display = 'block';
+                } else {
+                    feed.style.display = 'none';
+                }
+            });
+        }
+
+        // Initialize HLS streams for all cameras
+        function initializeHLSStreams() {
+            const cameras = [
+                { id: 'video-cam-01', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-02', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-03', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-04', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-05', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-06', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-07', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-08', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+                { id: 'video-cam-09', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' }
+            ];
+
+            cameras.forEach(camera => {
+                const video = document.getElementById(camera.id);
+                if (video && Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(camera.url);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        video.play().catch(e => console.log('Autoplay prevented:', e));
+                    });
+                } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = camera.url;
+                    video.addEventListener('loadedmetadata', function() {
+                        video.play().catch(e => console.log('Autoplay prevented:', e));
+                    });
+                }
+            });
+        }
+
+        // Real-time Event Feed Function
+        function addLogEntryToTimeline(cameraId, eventType, description) {
+            const timelineContainer = document.querySelector('.timeline-container');
+            if (!timelineContainer) return;
+            
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const eventElement = document.createElement('div');
+            eventElement.className = 'timeline-event';
+            eventElement.dataset.camera = cameraId;
+            
+            eventElement.innerHTML = `
+                <div class="event-time">${timestamp}</div>
+                <div class="event-type">${eventType}</div>
+                <div class="event-location">📍 ${cameraId}</div>
+                <div class="event-description" contenteditable="true" data-original="${description}">${description}</div>
+                <div class="edit-hint">Click to edit description</div>
+            `;
+            
+            // Add to beginning of timeline
+            timelineContainer.insertBefore(eventElement, timelineContainer.firstChild);
+            
+            // Keep only last 10 events to prevent overflow
+            while (timelineContainer.children.length > 10) {
+                timelineContainer.removeChild(timelineContainer.lastChild);
+            }
+        }
+
+        // Simulate real-time events
+        function startRealTimeEventFeed() {
+            const eventTypes = ['MOTION DETECTED', 'ACCESS GRANTED', 'SYSTEM UPDATE', 'DOOR FORCE', 'PERIMETER CHECK'];
+            const cameras = ['CAM-01', 'CAM-02', 'CAM-03', 'CAM-04', 'CAM-05', 'CAM-06', 'CAM-07', 'CAM-08', 'CAM-09'];
+            const descriptions = [
+                'Movement detected in monitored zone',
+                'Authorized personnel access confirmed',
+                'System health check completed',
+                'Door sensor triggered',
+                'Perimeter scan completed successfully'
+            ];
+            
+            // Add a random event every 30-60 seconds
+            setInterval(() => {
+                const randomCamera = cameras[Math.floor(Math.random() * cameras.length)];
+                const randomEventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
+                
+                addLogEntryToTimeline(randomCamera, randomEventType, randomDescription);
+            }, 45000); // Every 45 seconds
+        }
+
+        // Initialize streams on page load
         document.addEventListener('DOMContentLoaded', function() {
+            initializeHLSStreams();
+            startRealTimeEventFeed();
             setTimeout(checkForAlerts, 1000);
         });
 
