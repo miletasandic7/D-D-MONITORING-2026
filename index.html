@@ -250,7 +250,7 @@
         // Initialize Supabase client (global scope)
         const supabaseUrl = 'https://qskedgnkckgmwwxtduqt.supabase.co';
         const supabaseKey = 'sb_publishable_UA7h7UDvMyjrkUjlNcWh3A_nrK3PGuF';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         async function handleLogin(event) {
             event.preventDefault();
@@ -271,7 +271,7 @@
             
             try {
                 // Use official Supabase authentication method
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
@@ -285,7 +285,7 @@
                 if (data.user) {
                     // Authentication successful
                     // Get user role from users table
-                    const { data: userData, error: userError } = await supabase
+                    const { data: userData, error: userError } = await supabaseClient
                         .from('users')
                         .select('*')
                         .eq('email', email)
@@ -293,7 +293,7 @@
                     
                     if (userError || !userData) {
                         alert('User profile not found');
-                        await supabase.auth.signOut();
+                        await supabaseClient.auth.signOut();
                         return;
                     }
                     
