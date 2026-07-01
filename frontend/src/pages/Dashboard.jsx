@@ -136,6 +136,25 @@ function buildIncidentReport(event, camera, contacts, plan) {
   };
 }
 
+// Audio alarm - 3 beeps via Web Audio API
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.45, 0.9].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gainNode.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.35);
+    });
+  } catch (e) { /* AudioContext unavailable or blocked */ }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const paypalButtonsRef = useRef(null);
@@ -165,6 +184,21 @@ export default function Dashboard() {
   const [wizardSaving, setWizardSaving] = useState(false);
   const [wizardDone, setWizardDone] = useState(false);
   const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
+
+  // Setup Wizard - emergency contacts (blocks dashboard until filled)
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [setupSaving, setSetupSaving] = useState(false);
+  const [setupContacts, setSetupContacts] = useState({ police: '', fire: '', ambulance: '' });
+
+  // Inline camera add form
+  const [showAddCam, setShowAddCam] = useState(false);
+  const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '' });
+  const [addCamSaving, setAddCamSaving] = useState(false);
+  const [addCamError, setAddCamError] = useState('');
+
+  // Audio alarm incident count tracker
+  const prevNewIncidentsRef = useRef(null);
 
   const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
   const closeWizard = () => setWizardOpen(false);
@@ -236,6 +270,53 @@ export default function Dashboard() {
     const camName = cameras.find((c) => c.id === camId)?.name || camId;
     addAuditEntry(`Triggered voice talkdown on ${camName}`);
     setTimeout(() => setTalkdownActive(null), 5000);
+  };
+
+  const saveSetupContacts = () => {
+    if (!setupContacts.police.trim() || !setupContacts.fire.trim() || !setupContacts.ambulance.trim()) return;
+    setSetupSaving(true);
+    localStorage.setItem('emergency_contacts', JSON.stringify(setupContacts));
+    setEmergencyContacts({
+      policeStation: setupContacts.police,
+      fireService: setupContacts.fire,
+      ambulance: setupContacts.ambulance,
+      localCommand: '',
+    });
+    setSetupRequired(false);
+    setSetupSaving(false);
+    addAuditEntry('Emergency contacts configured during initial setup');
+  };
+
+  const submitAddCamera = async (e) => {
+    e.preventDefault();
+    if (!addCamForm.name.trim() || !addCamForm.rtsp_url.trim()) {
+      setAddCamError('Camera name and RTSP URL are required.');
+      return;
+    }
+    setAddCamSaving(true);
+    setAddCamError('');
+    const id = `CAM-${String(cameras.length + 1).padStart(2, '0')}`;
+    const newCam = {
+      id,
+      name: addCamForm.name.trim(),
+      rtsp_url: addCamForm.rtsp_url.trim(),
+      location: addCamForm.location.trim() || id,
+      enabled: true,
+      resolution: '1920x1080',
+      fps: 30,
+      codec: 'H264',
+    };
+    try {
+      await api.post('/cameras', newCam);
+      setCameras((prev) => [...prev, newCam]);
+      setAddCamForm({ name: '', rtsp_url: '', location: '' });
+      setShowAddCam(false);
+      addAuditEntry(`Added camera: ${newCam.name} (${id})`);
+    } catch (err) {
+      setAddCamError(err?.response?.data?.error || err.message || 'Failed to save camera.');
+    } finally {
+      setAddCamSaving(false);
+    }
   };
 
   const selectedPlanAmount = selectedPlan.paypalAmount;
@@ -434,6 +515,34 @@ export default function Dashboard() {
     })();
   }, [navigate]);
 
+  // Check if emergency contacts setup is needed (runs once after auth)
+  useEffect(() => {
+    if (!authChecked) return;
+    const saved = localStorage.getItem('emergency_contacts');
+    if (!saved) {
+      setSetupRequired(true);
+      setSetupChecked(true);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.police || !parsed.fire || !parsed.ambulance) {
+        setSetupRequired(true);
+      } else {
+        setEmergencyDistrict(parsed.district || '');
+        setEmergencyContacts({
+          policeStation: parsed.police,
+          fireService: parsed.fire,
+          ambulance: parsed.ambulance,
+          localCommand: parsed.command || '',
+        });
+      }
+    } catch {
+      setSetupRequired(true);
+    }
+    setSetupChecked(true);
+  }, [authChecked]);
+
   const systemStatus = {
     label: 'Operational',
     tone: 'good',
@@ -496,6 +605,16 @@ export default function Dashboard() {
       })
       .catch((err) => setError(err.message));
   }, [authChecked]);
+
+  // Audio alarm: play 3 beeps when new 'New' incidents arrive
+  useEffect(() => {
+    if (!incidentsLoaded) return;
+    const newCount = incidents.filter((i) => i.status === 'New').length;
+    if (prevNewIncidentsRef.current !== null && newCount > prevNewIncidentsRef.current) {
+      playAlarmBeep();
+    }
+    prevNewIncidentsRef.current = newCount;
+  }, [incidents, incidentsLoaded]);
 
   // Fetch cameras once auth is confirmed
   useEffect(() => {
@@ -596,8 +715,66 @@ export default function Dashboard() {
     }
   };
 
-  // Render nothing while the auth check is in flight
-  if (!authChecked) return null;
+  // Render nothing while auth or setup check is in flight
+  if (!authChecked || !setupChecked) return null;
+
+  if (setupRequired) {
+    return (
+      <div className="setup-overlay" role="dialog" aria-modal="true" aria-label="Initial setup required">
+        <section className="setup-modal">
+          <div className="setup-modal-header">
+            <span className="setup-icon" aria-hidden="true">&#x26A0;</span>
+            <h2>Setup Required</h2>
+          </div>
+          <p className="setup-desc">
+            Before accessing the dashboard, configure local emergency service contacts for your district.
+            These are required for automatic incident dispatch integration.
+          </p>
+          <div className="setup-fields">
+            <label className="search-field">
+              <span>Police Station</span>
+              <input
+                type="tel"
+                value={setupContacts.police}
+                onChange={(e) => setSetupContacts((p) => ({ ...p, police: e.target.value }))}
+                placeholder="e.g. 110 or +381-11-123-4567"
+                required
+                autoFocus
+              />
+            </label>
+            <label className="search-field">
+              <span>Fire Service</span>
+              <input
+                type="tel"
+                value={setupContacts.fire}
+                onChange={(e) => setSetupContacts((p) => ({ ...p, fire: e.target.value }))}
+                placeholder="e.g. 112 or +381-11-765-4321"
+                required
+              />
+            </label>
+            <label className="search-field">
+              <span>Ambulance / Medical</span>
+              <input
+                type="tel"
+                value={setupContacts.ambulance}
+                onChange={(e) => setSetupContacts((p) => ({ ...p, ambulance: e.target.value }))}
+                placeholder="e.g. 194 or local emergency number"
+                required
+              />
+            </label>
+          </div>
+          <button
+            className="primary-button setup-save-btn"
+            type="button"
+            disabled={!setupContacts.police.trim() || !setupContacts.fire.trim() || !setupContacts.ambulance.trim() || setupSaving}
+            onClick={saveSetupContacts}
+          >
+            {setupSaving ? 'Saving...' : 'Save & Enter Dashboard'}
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -731,7 +908,7 @@ export default function Dashboard() {
             <h2 id="overview">Dashboard</h2>
           </div>
           <div className="topbar-actions">
-            <button className="ghost-button" type="button" onClick={openWizard}>+ Add Camera</button>
+            <button className="ghost-button" type="button" onClick={() => { setShowAddCam(true); setTimeout(() => document.getElementById('cameras')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>+ Add Camera</button>
             <button className="primary-button" type="button">New Alert</button>
           </div>
         </header>
@@ -1164,7 +1341,56 @@ export default function Dashboard() {
                 <p className="eyebrow">Camera matrix</p>
                 <h3>Streams</h3>
               </div>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}
+              >
+                {showAddCam ? 'Cancel' : '+ Add Camera'}
+              </button>
             </div>
+
+            {showAddCam && (
+              <form className="add-cam-form" onSubmit={submitAddCamera}>
+                <label className="search-field">
+                  <span>Camera Name</span>
+                  <input
+                    value={addCamForm.name}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g. Back Yard"
+                    required
+                    autoFocus
+                  />
+                </label>
+                <label className="search-field">
+                  <span>RTSP Stream URL</span>
+                  <input
+                    value={addCamForm.rtsp_url}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, rtsp_url: e.target.value }))}
+                    placeholder="rtsp://192.168.1.x:554/stream"
+                    required
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Location (optional)</span>
+                  <input
+                    value={addCamForm.location}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="e.g. back_yard"
+                  />
+                </label>
+                <div className="add-cam-actions">
+                  {addCamError && <p className="checkout-status checkout-status-error">{addCamError}</p>}
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={addCamSaving || !addCamForm.name.trim() || !addCamForm.rtsp_url.trim()}
+                  >
+                    {addCamSaving ? 'Saving...' : 'Add Camera'}
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="camera-list">
               {cameras.length ? (
