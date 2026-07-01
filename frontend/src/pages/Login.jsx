@@ -62,6 +62,20 @@ const PAGE_CSS = `
   .pr-success p{color:#8ab0c9;line-height:1.6;font-size:.88rem;}
   @media(max-width:860px){.pg-grid{grid-template-columns:1fr;}.lc{order:-1;}}
   @media(max-width:520px){.pg-grid{padding:1rem 1rem 3rem;}.pg-header{padding:1.5rem 1rem 1rem;}.pr-cards{grid-template-columns:1fr;}}
+  .pg-footer{position:relative;z-index:1;text-align:center;padding:1.4rem 2rem 2.2rem;border-top:1px solid rgba(87,125,196,.12);margin-top:auto;}
+  .pg-footer-text{font-size:.78rem;color:#4e6580;margin-bottom:.55rem;letter-spacing:.02em;}
+  .pg-footer-links{display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap;}
+  .pg-footer-links button{background:none;border:none;color:#5a9ec4;font-size:.78rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit;transition:color 150ms;padding:0;}
+  .pg-footer-links button:hover{color:#8ee8ff;}
+  .leg-overlay{position:fixed;inset:0;z-index:2000;background:rgba(2,5,14,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+  .leg-modal{max-width:700px;width:100%;max-height:85vh;overflow-y:auto;background:linear-gradient(160deg,rgba(10,16,36,.97),rgba(4,8,22,.98));border:1px solid rgba(87,140,255,.22);border-radius:22px;padding:2.5rem 2.25rem;box-shadow:0 0 80px rgba(0,0,0,.6),0 0 40px rgba(0,170,255,.08);}
+  .leg-modal h2{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:#dff7ff;text-shadow:0 0 12px rgba(47,170,255,.4);margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid rgba(87,125,196,.18);}
+  .leg-modal h3{font-size:.82rem;text-transform:uppercase;letter-spacing:.14em;color:#8ee8ff;margin:1.4rem 0 .45rem;}
+  .leg-modal p{color:#8ab0c9;font-size:.88rem;line-height:1.75;margin-bottom:.75rem;}
+  .leg-modal strong{color:#c8dff5;}
+  .leg-warn{color:#ff9a6c;font-size:.82rem;padding:.7rem 1rem;border-radius:8px;background:rgba(255,100,40,.07);border:1px solid rgba(255,100,40,.18);margin-bottom:.75rem;}
+  .leg-close{float:right;background:none;border:1px solid rgba(109,162,255,.22);color:#8ab0c9;padding:.35rem .9rem;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:inherit;transition:border-color 150ms,color 150ms;}
+  .leg-close:hover{border-color:rgba(80,208,255,.5);color:#8ee8ff;}
 `;
 
 const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
@@ -127,6 +141,7 @@ export default function Login() {
   const [ppError, setPpError] = useState('');
   const [district, setDistrict] = useState('');
   const [contacts, setContacts] = useState({ police: '', fire: '', ambulance: '', command: '' });
+  const [legalModal, setLegalModal] = useState(null);
 
   const plan = PLANS.find((p) => p.id === planId) || PLANS[1];
   const contactsFilled = [district, contacts.police, contacts.fire, contacts.ambulance, contacts.command].every(
@@ -322,7 +337,85 @@ export default function Login() {
             </form>
           </section>
         </div>
+
+        <footer className="pg-footer">
+          <p className="pg-footer-text">&#xA9; 2026 D&amp;D Security Dashboard. All rights reserved.</p>
+          <div className="pg-footer-links">
+            <button type="button" onClick={() => setLegalModal('tos')}>Terms of Service</button>
+            <button type="button" onClick={() => setLegalModal('pp')}>Privacy Policy</button>
+          </div>
+        </footer>
       </div>
+
+      {legalModal && (
+        <div className="leg-overlay" role="dialog" aria-modal="true" aria-labelledby="leg-modal-title" onClick={() => setLegalModal(null)}>
+          <div className="leg-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="leg-close" type="button" onClick={() => setLegalModal(null)}>Close &#x2715;</button>
+
+            {legalModal === 'tos' ? (
+              <>
+                <h2 id="leg-modal-title">Terms of Service</h2>
+                <p><strong>Last updated: July 1, 2026</strong></p>
+
+                <h3>1. Service Description</h3>
+                <p>D&amp;D Security Dashboard is an auxiliary software tool based on AI detection and RTSP streaming. It provides real-time monitoring, automated incident reporting, and surveillance analytics for registered subscribers.</p>
+
+                <h3>2. Limitation of Liability</h3>
+                <p className="leg-warn"><strong>IMPORTANT &#x2014; PLEASE READ:</strong> D&amp;D Security bears NO legal, material or financial liability in the event of theft, burglary, property damage, or system failure caused by: interruption of the client&#x2019;s internet connection, server downtime, hardware malfunctions at the monitored location, or any other circumstances beyond our direct control.</p>
+                <p>D&amp;D Security Dashboard is a monitoring aid, not a replacement for professional on-site security personnel, law enforcement, or physical security infrastructure. The platform does not guarantee the prevention of any criminal activity or unauthorized access.</p>
+
+                <h3>3. User Responsibilities</h3>
+                <p>The user is obligated to ensure a stable RTSP stream and provide accurate emergency service numbers through the Setup Wizard before accessing the dashboard. Failure to provide correct contact information may delay emergency response and absolves D&amp;D Security of any related liability.</p>
+                <p>You are responsible for ensuring your use of this platform complies with all applicable laws and regulations in your jurisdiction, including data protection and surveillance laws.</p>
+
+                <h3>4. Subscription &amp; Payments</h3>
+                <p>Subscriptions are billed monthly through PayPal. Fees are non-refundable except where required by applicable law. D&amp;D Security reserves the right to modify pricing with 30 days&#x2019; notice to subscribers.</p>
+
+                <h3>5. Service Availability</h3>
+                <p>We strive for maximum uptime but do not guarantee uninterrupted service. Scheduled maintenance windows and force majeure events are excluded from any service level commitments.</p>
+
+                <h3>6. Acceptable Use</h3>
+                <p>You agree not to use the platform for unlawful surveillance, to monitor individuals without their consent where required by law, or to interfere with the platform&#x2019;s systems, infrastructure, or other users&#x2019; accounts.</p>
+
+                <h3>7. Governing Law &amp; Disputes</h3>
+                <p>These Terms are governed by applicable international commercial law. Any disputes shall be resolved through binding arbitration in the jurisdiction of D&amp;D Security&#x2019;s principal place of business.</p>
+
+                <h3>8. Modifications</h3>
+                <p>D&amp;D Security reserves the right to update these Terms at any time. Continued use of the platform following notification of changes constitutes acceptance of the updated Terms.</p>
+              </>
+            ) : (
+              <>
+                <h2 id="leg-modal-title">Privacy Policy</h2>
+                <p><strong>Last updated: July 1, 2026</strong></p>
+
+                <h3>1. Video &amp; Stream Data</h3>
+                <p>Video streams from cameras are processed in real-time in server temporary memory exclusively for the purpose of AI analysis and security detections. <strong>The platform does not store, record, or share video footage with third parties</strong>, except in cases required by law or investigation by official government agencies (police, judiciary).</p>
+
+                <h3>2. Personal Data We Collect</h3>
+                <p>We collect the following data to provide our service: account email address, subscription payment records (processed by PayPal &#x2014; subject to PayPal&#x2019;s own Privacy Policy), emergency contact numbers provided during setup, and camera metadata (names, locations, RTSP endpoints).</p>
+
+                <h3>3. How We Use Your Data</h3>
+                <p>Collected data is used solely to: authenticate your account, process your subscription payment, display camera feeds and AI-generated incident alerts, and enable emergency service integration. We do not sell or rent your personal data to any third parties.</p>
+
+                <h3>4. Data Storage &amp; Security</h3>
+                <p>Account and subscription data is stored in encrypted databases hosted on secure cloud infrastructure. AI detection events and incident logs are retained for operational purposes and may be reviewed by authorized D&amp;D Security personnel for service improvement only.</p>
+
+                <h3>5. Third-Party Services</h3>
+                <p>We use the following third-party services: <strong>PayPal</strong> for payment processing, <strong>Supabase</strong> for authentication, and <strong>Neon</strong> for database hosting. Each provider maintains their own data protection standards and privacy policies.</p>
+
+                <h3>6. Law Enforcement Requests</h3>
+                <p>In the event of a lawful request from official government authorities (police, judiciary, or regulatory bodies), we may be required to disclose relevant account information or incident data. We will notify affected users where legally permitted to do so.</p>
+
+                <h3>7. Your Rights</h3>
+                <p>You have the right to access, correct, or request deletion of your personal data held by D&amp;D Security. To exercise these rights, contact us through your dashboard account settings or via our support channel.</p>
+
+                <h3>8. Contact</h3>
+                <p>For privacy-related inquiries or data subject requests, please contact our data protection team through the platform&#x2019;s support channel.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
