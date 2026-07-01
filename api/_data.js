@@ -1,5 +1,5 @@
 // Production: all data is fetched from the Neon database via DATABASE_URL.
-// These arrays are empty ΓÇö no demo or mock data.
+// These arrays are empty - no demo or mock data.
 const cameras = [];
 const detections = [];
 

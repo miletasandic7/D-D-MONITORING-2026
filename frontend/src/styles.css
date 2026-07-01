@@ -311,7 +311,7 @@ textarea {
   border-color: rgba(31, 201, 123, 0.28);
 }
 
-/* ΓöÇΓöÇ Phase 2: Smart Search panel ΓöÇΓöÇ */
+/* -- Phase 2: Smart Search panel -- */
 .search-panel {
   margin-bottom: 0;
 }
@@ -401,7 +401,7 @@ textarea {
   cursor: pointer;
 }
 
-/* ΓöÇΓöÇ Phase 3: Notification banner ΓöÇΓöÇ */
+/* -- Phase 3: Notification banner -- */
 .notif-stack {
   position: fixed;
   top: 1rem;
@@ -484,7 +484,7 @@ textarea {
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* ΓöÇΓöÇ Phase 3: Camera Onboarding Wizard ΓöÇΓöÇ */
+/* -- Phase 3: Camera Onboarding Wizard -- */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -561,7 +561,7 @@ textarea {
   line-height: 1.6;
 }
 
-/* ΓöÇΓöÇ Phase 3: Talkdown ΓöÇΓöÇ */
+/* -- Phase 3: Talkdown -- */
 .talkdown-row {
   display: flex;
   align-items: center;
@@ -612,7 +612,7 @@ textarea {
   animation: ls-pulse 1s ease-in-out infinite;
 }
 
-/* ΓöÇΓöÇ Phase 4: Subscription / Billing ΓöÇΓöÇ */
+/* -- Phase 4: Subscription / Billing -- */
 .billing-panel {
   border-color: rgba(0, 212, 255, 0.22);
   box-shadow: 0 0 32px rgba(0, 212, 255, 0.08), 0 24px 80px rgba(0, 0, 0, 0.28);
@@ -971,7 +971,7 @@ textarea {
   width: 100%;
 }
 
-/* ΓöÇΓöÇ Phase 4: Audit Trail ΓöÇΓöÇ */
+/* -- Phase 4: Audit Trail -- */
 .audit-panel {
   margin-top: 0;
 }
@@ -992,7 +992,7 @@ textarea {
   color: #85dfff;
 }
 
-/* ΓöÇΓöÇ Mobile: responsive additions ΓöÇΓöÇ */
+/* -- Mobile: responsive additions -- */
 @media (max-width: 720px) {
   .notif-stack {
     top: auto;

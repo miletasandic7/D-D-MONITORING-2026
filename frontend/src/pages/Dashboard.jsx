@@ -158,7 +158,7 @@ export default function Dashboard() {
   const [suppressEnabled, setSuppressEnabled] = useState(false);
   const [suppressThreshold, setSuppressThreshold] = useState(85);
 
-  // Phase 3 ΓÇö Camera Onboarding Wizard
+  // Phase 3 - Camera Onboarding Wizard
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardScanning, setWizardScanning] = useState(false);
@@ -194,10 +194,10 @@ export default function Dashboard() {
     }
   };
 
-  // Phase 3 ΓÇö Voice Talkdown
+  // Phase 3 - Voice Talkdown
   const [talkdownActive, setTalkdownActive] = useState(null);
 
-  // Phase 4 ΓÇö Audit Log
+  // Phase 4 - Audit Log
   const [auditLog, setAuditLog] = useState([
     { id: 1, ts: new Date(Date.now() - 1000 * 60 * 18).toLocaleTimeString(), user: 'operator@agency.com', action: 'Logged in to Security Dashboard' },
     { id: 2, ts: new Date(Date.now() - 1000 * 60 * 15).toLocaleTimeString(), user: 'operator@agency.com', action: 'Viewed Incident Queue (3 open incidents)' },
@@ -206,12 +206,12 @@ export default function Dashboard() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
   const addAuditEntry = (action) => setAuditLog((prev) => [{ id: Date.now(), ts: new Date().toLocaleTimeString(), user: currentUser?.email || 'operator', action }, ...prev].slice(0, 50));
 
-  // Phase 4 ΓÇö White-Label Branding
+  // Phase 4 - White-Label Branding
   const [brandMode, setBrandMode] = useState('default'); // 'default' | 'corporate'
   const brandName = brandMode === 'corporate' ? 'SecureOps Enterprise' : 'D&D Global AI Surveillance';
   const brandInitial = brandMode === 'corporate' ? 'S' : 'D';
 
-  // Phase 4 ΓÇö Subscription
+  // Phase 4 - Subscription
   const [showBilling, setShowBilling] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState('growth');
   const [checkoutStatus, setCheckoutStatus] = useState('');
@@ -396,7 +396,7 @@ export default function Dashboard() {
     };
   }, [paymentStep, requiredEmergencyFields, selectedPlan.id, selectedPlan.name, selectedPlanAmount, selectedPlanSupportsPaypal, emergencyDistrict, emergencyContacts.policeStation, emergencyContacts.fireService, emergencyContacts.ambulance, emergencyContacts.localCommand]);
 
-  // Phase 3 ΓÇö Push Notification Banner
+  // Phase 3 - Push Notification Banner
   const [notifications, setNotifications] = useState([]);
   const dismissNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
@@ -406,13 +406,13 @@ export default function Dashboard() {
     const timer = setTimeout(() => {
       setNotifications((prev) => [
         ...prev,
-        { id: Date.now(), level: 'critical', title: 'Critical Alert', body: 'High-confidence intrusion detected at Main Entrance ΓÇö CAM-01', ts: new Date().toLocaleTimeString() },
+        { id: Date.now(), level: 'critical', title: 'Critical Alert', body: 'High-confidence intrusion detected at Main Entrance - CAM-01', ts: new Date().toLocaleTimeString() },
       ]);
     }, 3500);
     return () => clearTimeout(timer);
   }, [authChecked]);
 
-  // Auth guard ΓÇö redirect to login if no active Supabase session
+  // Auth guard - redirect to login if no active Supabase session
   useEffect(() => {
     (async () => {
       try {
@@ -627,7 +627,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-shell">
-      {/* ΓöÇΓöÇ Push Notification Banner ΓöÇΓöÇ */}
+      {/* -- Push Notification Banner -- */}
       {notifications.length > 0 && (
         <div className="notif-stack" role="alert" aria-live="assertive">
           {notifications.map((n) => (
@@ -638,19 +638,19 @@ export default function Dashboard() {
                 <p>{n.body}</p>
               </div>
               <span className="notif-time">{n.ts}</span>
-              <button className="notif-dismiss" onClick={() => dismissNotification(n.id)} aria-label="Dismiss">Γ£ò</button>
+              <button className="notif-dismiss" onClick={() => dismissNotification(n.id)} aria-label="Dismiss">&#x2715;</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ΓöÇΓöÇ Camera Onboarding Wizard Modal ΓöÇΓöÇ */}
+      {/* -- Camera Onboarding Wizard Modal -- */}
       {wizardOpen && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add new camera">
           <section className="modal-card">
             <div className="modal-header">
-              <h3>{wizardStep === 3 ? 'Camera Added Γ£ô' : 'Add New Camera'}</h3>
-              <button className="notif-dismiss" onClick={closeWizard} aria-label="Close">Γ£ò</button>
+              <h3>{wizardStep === 3 ? 'Camera Added' : 'Add New Camera'}</h3>
+              <button className="notif-dismiss" onClick={closeWizard} aria-label="Close">&#x2715;</button>
             </div>
 
             {wizardStep === 1 && (
@@ -660,14 +660,14 @@ export default function Dashboard() {
                   <label className="search-field"><span>Camera ID</span><input value={newCamera.id} onChange={(e) => setNewCamera((p) => ({ ...p, id: e.target.value }))} placeholder="CAM-10" /></label>
                   <label className="search-field"><span>Display Name</span><input value={newCamera.name} onChange={(e) => setNewCamera((p) => ({ ...p, name: e.target.value }))} placeholder="South Perimeter" /></label>
                   <label className="search-field"><span>Location</span><input value={newCamera.location} onChange={(e) => setNewCamera((p) => ({ ...p, location: e.target.value }))} placeholder="south_entrance" /></label>
-                  <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://ΓÇª" /></label>
+                  <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://..." /></label>
                 </div>
                 <div className="wizard-actions">
                   <button className="ghost-button" type="button" onClick={runONVIFScan} disabled={wizardScanning}>
-                    {wizardScanning ? 'Γƒ│ Scanning networkΓÇª' : 'Γîû Auto-scan (ONVIF)'}
+                    {wizardScanning ? 'Scanning network...' : 'Auto-scan (ONVIF)'}
                   </button>
                   <button className="primary-button" type="button" onClick={() => setWizardStep(2)} disabled={!newCamera.id || !newCamera.name}>
-                    Next ΓåÆ
+                    Next
                   </button>
                 </div>
               </>
@@ -684,9 +684,9 @@ export default function Dashboard() {
                   </tbody>
                 </table>
                 <div className="wizard-actions">
-                  <button className="ghost-button" type="button" onClick={() => setWizardStep(1)}>ΓåÉ Back</button>
+                  <button className="ghost-button" type="button" onClick={() => setWizardStep(1)}>Back</button>
                   <button className="primary-button" type="button" onClick={saveCamera} disabled={wizardSaving}>
-                    {wizardSaving ? 'SavingΓÇª' : 'Save to Database'}
+                    {wizardSaving ? 'Saving...' : 'Save to Database'}
                   </button>
                 </div>
               </>
@@ -715,7 +715,7 @@ export default function Dashboard() {
           <a className="sidebar-nav-item" href="#cameras">Cameras</a>
           <a className="sidebar-nav-item" href="#events">Incidents</a>
           <a className="sidebar-nav-item" href="#audit">Audit Trail</a>
-          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>ΓÜÖ Subscription</button>
+          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>D&amp;D Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
@@ -736,7 +736,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* ΓöÇΓöÇ Subscription / Billing Panel ΓöÇΓöÇ */}
+        {/* -- Subscription / Billing Panel -- */}
         {showBilling && (
           <section className="dashboard-panel billing-panel" id="billing">
             <div className="panel-heading">
@@ -744,7 +744,7 @@ export default function Dashboard() {
                 <p className="eyebrow">License Management</p>
                 <h3>Client Plans &amp; Checkout</h3>
               </div>
-              <button className="notif-dismiss" type="button" onClick={() => setShowBilling(false)}>Γ£ò</button>
+              <button className="notif-dismiss" type="button" onClick={() => setShowBilling(false)}>&#x2715;</button>
             </div>
 
             <div className="billing-grid billing-grid-wide">
@@ -872,7 +872,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* ΓöÇΓöÇ Smart Search v2 + False Alarm controls ΓöÇΓöÇ */}
+        {/* -- Smart Search v2 + False Alarm controls -- */}
         <section className="search-panel dashboard-panel" id="search" aria-label="Smart search filters">
           <div className="panel-heading">
             <div>
@@ -905,7 +905,7 @@ export default function Dashboard() {
           <div className="search-grid">
             <label className="search-field">
               <span>Object Type</span>
-              <input type="text" placeholder="Person, VehicleΓÇª" value={filterObjectType} onChange={(e) => setFilterObjectType(e.target.value)} />
+              <input type="text" placeholder="Person, Vehicle..." value={filterObjectType} onChange={(e) => setFilterObjectType(e.target.value)} />
             </label>
             <label className="search-field">
               <span>Camera</span>
@@ -918,7 +918,7 @@ export default function Dashboard() {
             </label>
             <label className="search-field">
               <span>Zone / Location</span>
-              <input type="text" placeholder="entrance, parkingΓÇª" value={filterZone} onChange={(e) => setFilterZone(e.target.value)} />
+              <input type="text" placeholder="entrance, parking..." value={filterZone} onChange={(e) => setFilterZone(e.target.value)} />
             </label>
             <label className="search-field">
               <span>Direction</span>
@@ -936,7 +936,7 @@ export default function Dashboard() {
             </label>
             <label className="search-field">
               <span>Color Attribute</span>
-              <input type="text" placeholder="Red, BlackΓÇª" value={filterColor} onChange={(e) => setFilterColor(e.target.value)} />
+              <input type="text" placeholder="Red, Black..." value={filterColor} onChange={(e) => setFilterColor(e.target.value)} />
             </label>
           </div>
 
@@ -963,7 +963,7 @@ export default function Dashboard() {
         <section className="metrics-grid" aria-label="Key metrics">
           <article className="metric-card">
             <p className="metric-label">Active Cameras</p>
-            <strong>{cameras.length ? activeCameras : 'ΓÇö'}</strong>
+            <strong>{cameras.length ? activeCameras : '-'}</strong>
             <span>{cameras.length ? `${cameras.length} total streams` : 'Loading camera inventory'}</span>
           </article>
           <article className="metric-card">
@@ -973,7 +973,7 @@ export default function Dashboard() {
           </article>
           <article className="metric-card">
             <p className="metric-label">Recent Alerts</p>
-            <strong>{incidentsLoaded ? recentAlerts : 'ΓÇö'}</strong>
+            <strong>{incidentsLoaded ? recentAlerts : '-'}</strong>
             <span>Open incidents in queue</span>
           </article>
         </section>
@@ -1134,7 +1134,7 @@ export default function Dashboard() {
                             onClick={() => { exportEvidence(event); setSelectedAlarmId(event.eventId); addAuditEntry(`Exported evidence package for Event #${event.eventId}`); }}
                             title="Download evidence package (JSON + video metadata)"
                           >
-                            Γ¼ç Export
+                            Export
                           </button>
                           <button
                             type="button"
@@ -1190,7 +1190,7 @@ export default function Dashboard() {
                         onClick={() => triggerTalkdown(cam.id)}
                         disabled={talkdownActive === cam.id}
                       >
-                        {talkdownActive === cam.id ? '≡ƒöè Warning ActiveΓÇª' : '≡ƒÄÖ Trigger Talkdown'}
+                        {talkdownActive === cam.id ? 'Warning Active...' : 'Trigger Talkdown'}
                       </button>
                       {talkdownActive === cam.id && (
                         <span className="talkdown-indicator" aria-live="polite">
@@ -1201,13 +1201,13 @@ export default function Dashboard() {
                   </article>
                 ))
               ) : (
-                <div className="empty-state">Loading camerasΓÇª</div>
+                <div className="empty-state">No active streams connected</div>
               )}
             </div>
           </section>
         </section>
 
-        {/* ΓöÇΓöÇ Operator Audit Trail ΓöÇΓöÇ */}
+        {/* -- Operator Audit Trail -- */}
         <section className="dashboard-panel audit-panel" id="audit">
           <div className="panel-heading">
             <div><p className="eyebrow">Compliance &amp; traceability</p><h3>Operator Audit Trail</h3></div>
