@@ -1,4 +1,4 @@
-﻿const PLAN_DEFINITIONS = {
+const PLAN_DEFINITIONS = {
   starter: {
     id: 'starter',
     name: 'Standard Global',

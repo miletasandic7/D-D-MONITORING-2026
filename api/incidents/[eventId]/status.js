@@ -1,4 +1,4 @@
-﻿const db = require('../../../db/index');
+const db = require('../../../db/index');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 

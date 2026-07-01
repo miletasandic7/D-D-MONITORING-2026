@@ -1,4 +1,4 @@
-﻿// /api/paypal is not a direct endpoint.
+// /api/paypal is not a direct endpoint.
 // Use /api/paypal/orders (POST) and /api/paypal/orders/:orderId/capture (POST).
 module.exports = (req, res) => {
   res.status(405).json({

@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const { capturePayPalOrder, createPayPalOrder } = require('../paypal');
 
 const router = express.Router();

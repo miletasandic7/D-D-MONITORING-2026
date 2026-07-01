@@ -1,4 +1,4 @@
-﻿// Mock API Endpoint: /api/search/attributes
+// Mock API Endpoint: /api/search/attributes
 // Supports YOLO object detection attribute filtering
 
 const express = require('express');

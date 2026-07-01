@@ -1,4 +1,4 @@
-﻿let supabaseInstance = null;
+let supabaseInstance = null;
 let supabasePromise = null;
 
 export async function getSupabaseClient() {

@@ -1,4 +1,4 @@
-﻿function getSupabaseConfig() {
+function getSupabaseConfig() {
   const baseUrl =
     process.env.SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||

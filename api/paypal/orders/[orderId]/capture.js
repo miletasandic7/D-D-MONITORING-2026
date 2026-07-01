@@ -1,4 +1,4 @@
-﻿const { capturePayPalOrder } = require('../../../../paypal');
+const { capturePayPalOrder } = require('../../../../paypal');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
