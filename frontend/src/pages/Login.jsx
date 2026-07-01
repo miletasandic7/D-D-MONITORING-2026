@@ -4,7 +4,6 @@ import { getSupabaseClient } from '../services/supabaseClient';
 import api from '../services/api';
 
 const PAGE_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;700&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   .pg{position:relative;min-height:100vh;width:100%;overflow-x:hidden;font-family:'Space Grotesk',sans-serif;color:#e5eef7;background:radial-gradient(circle at 16% 18%,rgba(0,212,255,.15),transparent 24%),radial-gradient(circle at 82% 14%,rgba(52,120,255,.12),transparent 22%),linear-gradient(180deg,#050b16 0%,#040914 60%,#030710 100%);}
   .pg::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(87,125,196,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(87,125,196,.06) 1px,transparent 1px);background-size:68px 68px;mask-image:radial-gradient(ellipse at center,black 30%,transparent 90%);opacity:.28;pointer-events:none;z-index:0;}
@@ -63,7 +62,7 @@ const PAGE_CSS = `
   @media(max-width:860px){.pg-grid{grid-template-columns:1fr;}.lc{order:-1;}}
   @media(max-width:520px){.pg-grid{padding:1rem 1rem 3rem;}.pg-header{padding:1.5rem 1rem 1rem;}.pr-cards{grid-template-columns:1fr;}}
   .pg-footer{position:relative;z-index:1;text-align:center;padding:1.4rem 2rem 2.2rem;border-top:1px solid rgba(87,125,196,.12);margin-top:auto;}
-  .pg-footer-text{font-size:.78rem;color:#4e6580;margin-bottom:.55rem;letter-spacing:.02em;}
+  .pg-footer-text{font-size:.78rem;color:#8ab0c9;margin-bottom:.55rem;letter-spacing:.02em;}
   .pg-footer-links{display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap;}
   .pg-footer-links button{background:none;border:none;color:#5a9ec4;font-size:.78rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:inherit;transition:color 150ms;padding:0;}
   .pg-footer-links button:hover{color:#8ee8ff;}
