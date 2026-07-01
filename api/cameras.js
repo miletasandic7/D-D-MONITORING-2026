@@ -1,20 +1,20 @@
-const db = require('../../db/index');
+const db = require('../db/index');
 
 module.exports = async (req, res) => {
-  if (!db.hasDatabase) {
-    res.status(503).json({ success: false, error: 'Database not configured. Set DATABASE_URL environment variable.' });
-    return;
-  }
-
   if (req.method === 'GET') {
+    if (!db.hasDatabase) {
+      res.status(200).json({ success: true, count: 0, cameras: [] });
+      return;
+    }
     try {
       const result = await db.query(
         'SELECT id, name, rtsp_url, location, enabled, resolution, fps, codec FROM cameras ORDER BY id',
       );
       res.status(200).json({ success: true, count: result.rows.length, cameras: result.rows });
     } catch (err) {
-      console.error('Error fetching cameras:', err);
-      res.status(500).json({ success: false, error: err.message });
+      console.error('GET /api/cameras error:', err.message);
+      // Return empty list instead of crashing the dashboard
+      res.status(200).json({ success: true, count: 0, cameras: [], warning: err.message });
     }
     return;
   }
