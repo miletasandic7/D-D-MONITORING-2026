@@ -1,0 +1,29 @@
+﻿{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "D&D Global AI Surveillance API",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "migrate": "node db/migrate.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "ffmpeg-static": "^5.3.0",
+    "pg": "^8.11.3",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "@eslint/create-config": "^2.0.0",
+    "eslint": "^10.5.0",
+    "globals": "^17.7.0"
+  }
+}
