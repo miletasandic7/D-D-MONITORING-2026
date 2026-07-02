@@ -204,10 +204,19 @@ export default function Login() {
     try {
       const supabase = await getSupabaseClient();
       if (!supabase) { alert('Supabase environment variables are missing.'); return; }
+
+      // Clear any stale session data first
+      localStorage.removeItem('currentUser');
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { alert('Invalid credentials'); return; }
-      localStorage.setItem('currentUser', JSON.stringify(data.user));
-      navigate('/dashboard');
+      if (error) {
+        alert('Invalid credentials: ' + (error.message || 'Please check your email and password.'));
+        return;
+      }
+      if (data.user) {
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        navigate('/dashboard');
+      }
     } catch (err) {
       alert('Sign in failed: ' + err.message);
     }
@@ -320,6 +329,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="operator@agency.com"
                   required
+                  autoComplete="email"
                 />
               </label>
               <label className="lc-field">
@@ -330,6 +340,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                 />
               </label>
               <button type="submit" className="lc-btn">Enter Secure Console</button>

@@ -478,17 +478,22 @@ export default function Dashboard() {
       try {
         const supabase = await getSupabaseClient();
         if (!supabase) {
+          localStorage.removeItem('currentUser');
           navigate('/', { replace: true });
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          // Clear stale session data
+          localStorage.removeItem('currentUser');
+          await supabase.auth.signOut();
           navigate('/', { replace: true });
         } else {
           setAuthChecked(true);
         }
       } catch (err) {
+        localStorage.removeItem('currentUser');
         navigate('/', { replace: true });
       }
     })();

@@ -15,6 +15,33 @@ export async function getSupabaseClient() {
     return null;
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  });
+
+  // Clear any invalid sessions on init
+  try {
+    const { data: { session } } = await supabaseInstance.auth.getSession();
+    if (!session) {
+      // Clear stale localStorage data
+      localStorage.removeItem('supabase.auth.token');
+    }
+  } catch (e) {
+    // Clear any corrupted session data
+    localStorage.removeItem('supabase.auth.token');
+  }
+
   return supabaseInstance;
+}
+
+export async function clearSession() {
+  if (supabaseInstance) {
+    await supabaseInstance.auth.signOut();
+  }
+  localStorage.removeItem('supabase.auth.token');
+  localStorage.removeItem('currentUser');
 }
