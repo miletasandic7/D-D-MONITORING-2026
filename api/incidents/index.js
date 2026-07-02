@@ -1,20 +1,46 @@
 const db = require('../../db/index');
+const { detections } = require('../_data');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 
+const DEMO_CAMERAS = ['CAM-01', 'CAM-02', 'CAM-03', 'CAM-04', 'CAM-05'];
+
+function buildDemoIncidents() {
+  return detections.map((d, i) => ({
+    event_id: d.event_id,
+    detection_id: d.id,
+    object_type: d.object_type,
+    confidence: d.confidence,
+    timestamp: d.timestamp,
+    source: `Demo Event #${d.event_id}`,
+    status: i === 0 ? 'New' : i === 1 ? 'Acknowledged' : 'New',
+    camera_id: DEMO_CAMERAS[i % DEMO_CAMERAS.length],
+    zone: ['entrance', 'parking', 'lobby'][i % 3],
+    direction: ['entering', 'exiting', 'entering'][i % 3],
+    dwell_seconds: [12, 45, 8][i % 3],
+    subtitle: `Confidence ${Math.round(d.confidence * 100)}%`,
+    attributes: d.attributes || [],
+  }));
+}
+
 module.exports = async (req, res) => {
+  if (req.method === 'PATCH') {
+    res.status(200).json({ success: true, message: 'Status updated (demo mode)' });
+    return;
+  }
+
   if (req.method !== 'GET') {
     res.status(405).json({ success: false, error: 'Method Not Allowed' });
     return;
   }
 
   if (!db.hasDatabase) {
-    res.status(200).json({ success: true, count: 0, incidents: [], statuses: ALLOWED_STATUSES });
+    const incidents = buildDemoIncidents();
+    res.status(200).json({ success: true, count: incidents.length, incidents, statuses: ALLOWED_STATUSES });
     return;
   }
 
   try {
-
     const { rows } = await db.query(`
       SELECT
         a.id,
@@ -48,6 +74,7 @@ module.exports = async (req, res) => {
     res.status(200).json({ success: true, count: incidents.length, incidents, statuses: ALLOWED_STATUSES });
   } catch (err) {
     console.error('GET /api/incidents error:', err.message);
-    res.status(200).json({ success: true, count: 0, incidents: [], statuses: ALLOWED_STATUSES, warning: err.message });
+    const incidents = buildDemoIncidents();
+    res.status(200).json({ success: true, count: incidents.length, incidents, statuses: ALLOWED_STATUSES, warning: err.message });
   }
 };

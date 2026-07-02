@@ -1,10 +1,4 @@
-// Production: all data is fetched from the Neon database via DATABASE_URL.
-// These arrays are empty - no demo or mock data.
 const cameras = [];
-const detections = [];
-
-module.exports = { cameras, detections };
-
 
 const detections = [
   {
@@ -13,7 +7,7 @@ const detections = [
     object_type: 'Vehicle',
     confidence: 0.95,
     bounding_box: { x: 120, y: 80, width: 200, height: 150 },
-    timestamp: '2024-06-21 14:32:15',
+    timestamp: new Date(Date.now() - 1000 * 60 * 32).toISOString(),
     attributes: [
       { attribute_type: 'color', attribute_value: 'Red', confidence: 0.88 },
       { attribute_type: 'color', attribute_value: 'Black', confidence: 0.92 },
@@ -26,7 +20,7 @@ const detections = [
     object_type: 'Person',
     confidence: 0.98,
     bounding_box: { x: 50, y: 100, width: 80, height: 200 },
-    timestamp: '2024-06-21 14:28:42',
+    timestamp: new Date(Date.now() - 1000 * 60 * 28).toISOString(),
     attributes: [
       { attribute_type: 'color', attribute_value: 'Blue', confidence: 0.85 },
       { attribute_type: 'equipment', attribute_value: 'Backpack', confidence: 0.91 },
@@ -35,11 +29,11 @@ const detections = [
   },
   {
     id: 3,
-    event_id: 4,
+    event_id: 3,
     object_type: 'Person',
     confidence: 0.92,
     bounding_box: { x: 200, y: 150, width: 75, height: 180 },
-    timestamp: '2024-06-21 13:55:33',
+    timestamp: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
     attributes: [
       { attribute_type: 'color', attribute_value: 'Black', confidence: 0.89 },
       { attribute_type: 'equipment', attribute_value: 'Toolbox', confidence: 0.84 },
@@ -48,7 +42,4 @@ const detections = [
   },
 ];
 
-module.exports = {
-  cameras,
-  detections,
-};
+module.exports = { cameras, detections };

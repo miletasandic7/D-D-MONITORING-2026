@@ -1,8 +1,18 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+let Pool;
+try {
+  Pool = require('pg').Pool;
+} catch (e) {
+  Pool = null;
+}
+
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv not available, env vars come from host
+}
 
 const connectionString = process.env.DATABASE_URL;
-const hasDatabase = Boolean(connectionString);
+const hasDatabase = Boolean(connectionString) && Boolean(Pool);
 
 const pool = hasDatabase
   ? new Pool({
@@ -15,7 +25,7 @@ module.exports = {
   hasDatabase,
   query: (text, params) => {
     if (!pool) {
-      throw new Error('Missing DATABASE_URL environment variable');
+      throw new Error('No database connection available');
     }
     return pool.query(text, params);
   },
