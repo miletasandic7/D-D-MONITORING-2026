@@ -48,17 +48,6 @@ function loadPayPalSdk(clientId, currency = 'USD') {
   return paypalSdkPromise;
 }
 
-const CAMERA_GEO = {
-  'CAM-01': { lat: 45.8154, lng: 15.9819, label: 'Main Entrance', note: 'front access lane and reception perimeter' },
-  'CAM-02': { lat: 45.8129, lng: 15.9672, label: 'Parking Lot', note: 'northwest parking bay near service road' },
-  'CAM-03': { lat: 45.8138, lng: 15.9862, label: 'Lobby', note: 'central lobby and badge access point' },
-  'CAM-04': { lat: 45.8087, lng: 15.9728, label: 'Server Room', note: 'secured internal infrastructure room' },
-  'CAM-05': { lat: 45.8071, lng: 15.9594, label: 'Warehouse A', note: 'east warehouse loading corridor' },
-  'CAM-06': { lat: 45.8061, lng: 15.9524, label: 'Warehouse B', note: 'west warehouse receiving corridor' },
-  'CAM-07': { lat: 45.8047, lng: 15.9658, label: 'Loading Dock', note: 'truck access and unloading platform' },
-  'CAM-08': { lat: 45.8189, lng: 15.9715, label: 'Perimeter North', note: 'north fence line and exterior patrol route' },
-  'CAM-09': { lat: 45.8032, lng: 15.9781, label: 'Perimeter South', note: 'southern fence line and back perimeter' },
-};
 
 const PLAN_OPTIONS = [
   {
@@ -102,12 +91,11 @@ function buildHlsManifestUrl(cameraId) {
 }
 
 function buildCameraGeo(camera) {
-  const fallback = CAMERA_GEO[camera?.id] || {};
   return {
-    lat: Number(camera?.lat ?? fallback.lat ?? 45.8154),
-    lng: Number(camera?.lng ?? fallback.lng ?? 15.9819),
-    label: camera?.name || fallback.label || camera?.id || 'Unknown location',
-    note: fallback.note || camera?.location || 'Security perimeter point',
+    lat: Number(camera?.lat ?? 0),
+    lng: Number(camera?.lng ?? 0),
+    label: camera?.name || camera?.id || 'Unknown location',
+    note: camera?.location || 'Security perimeter point',
   };
 }
 
@@ -183,28 +171,32 @@ export default function Dashboard() {
   const [wizardScanning, setWizardScanning] = useState(false);
   const [wizardSaving, setWizardSaving] = useState(false);
   const [wizardDone, setWizardDone] = useState(false);
-  const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
+  const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
 
   // Inline camera add form
   const [showAddCam, setShowAddCam] = useState(false);
-  const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '' });
+  const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
   const [addCamSaving, setAddCamSaving] = useState(false);
   const [addCamError, setAddCamError] = useState('');
 
   // Audio alarm incident count tracker
   const prevNewIncidentsRef = useRef(null);
 
-  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
+  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
   const closeWizard = () => setWizardOpen(false);
 
-  const runONVIFScan = () => {
+  const runONVIFScan = async () => {
     setWizardScanning(true);
-    setTimeout(() => {
-      const discovered = `rtsp://192.168.1.${100 + Math.floor(Math.random() * 50)}:554/stream1`;
-      setNewCamera((prev) => ({ ...prev, rtsp_url: prev.rtsp_url || discovered }));
+    try {
+      const res = await api.get('/cameras/scan');
+      if (res.data?.rtsp_url) {
+        setNewCamera((prev) => ({ ...prev, rtsp_url: prev.rtsp_url || res.data.rtsp_url }));
+      }
+    } catch {
+      // Auto-scan not available - user enters RTSP URL manually
+    } finally {
       setWizardScanning(false);
-      setWizardStep(2);
-    }, 2000);
+    }
   };
 
   const saveCamera = async () => {
@@ -212,9 +204,11 @@ export default function Dashboard() {
     try {
       await api.post('/cameras', newCamera);
       setCameras((prev) => [...prev, newCamera]);
-    } catch {
-      // optimistic add even if API isn't wired yet
-      setCameras((prev) => [...prev, newCamera]);
+    } catch (err) {
+      setWizardDone(false);
+      alert(err?.response?.data?.error || err.message || 'Failed to save camera.');
+      setWizardSaving(false);
+      return;
     } finally {
       setWizardSaving(false);
       setWizardDone(true);
@@ -226,11 +220,7 @@ export default function Dashboard() {
   const [talkdownActive, setTalkdownActive] = useState(null);
 
   // Phase 4 - Audit Log
-  const [auditLog, setAuditLog] = useState([
-    { id: 1, ts: new Date(Date.now() - 1000 * 60 * 18).toLocaleTimeString(), user: 'operator@agency.com', action: 'Logged in to Security Dashboard' },
-    { id: 2, ts: new Date(Date.now() - 1000 * 60 * 15).toLocaleTimeString(), user: 'operator@agency.com', action: 'Viewed Incident Queue (3 open incidents)' },
-    { id: 3, ts: new Date(Date.now() - 1000 * 60 * 10).toLocaleTimeString(), user: 'operator@agency.com', action: 'Exported evidence package for Event #2' },
-  ]);
+  const [auditLog, setAuditLog] = useState([]);
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
   const addAuditEntry = (action) => setAuditLog((prev) => [{ id: Date.now(), ts: new Date().toLocaleTimeString(), user: currentUser?.email || 'operator', action }, ...prev].slice(0, 50));
 
@@ -256,7 +246,6 @@ export default function Dashboard() {
   const [paypalMountError, setPaypalMountError] = useState('');
   const [paypalMounting, setPaypalMounting] = useState(false);
 
-  const subscription = { tier: 'Enterprise', status: 'Active', validUntil: '2027-12-31', cameras: 'Unlimited', users: 'Unlimited', ai: 'Full AI Analytics', sla: '99.9% uptime SLA' };
   const selectedPlan = PLAN_OPTIONS.find((plan) => plan.id === selectedPlanId) || PLAN_OPTIONS[1];
 
   const triggerTalkdown = (camId) => {
@@ -280,6 +269,8 @@ export default function Dashboard() {
       name: addCamForm.name.trim(),
       rtsp_url: addCamForm.rtsp_url.trim(),
       location: addCamForm.location.trim() || id,
+      lat: addCamForm.lat ? Number(addCamForm.lat) : null,
+      lng: addCamForm.lng ? Number(addCamForm.lng) : null,
       enabled: true,
       resolution: '1920x1080',
       fps: 30,
@@ -288,7 +279,7 @@ export default function Dashboard() {
     try {
       await api.post('/cameras', newCam);
       setCameras((prev) => [...prev, newCam]);
-      setAddCamForm({ name: '', rtsp_url: '', location: '' });
+      setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
       setShowAddCam(false);
       addAuditEntry(`Added camera: ${newCam.name} (${id})`);
     } catch (err) {
@@ -460,17 +451,6 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const dismissNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
-  // Simulate a critical push notification after auth
-  useEffect(() => {
-    if (!authChecked) return;
-    const timer = setTimeout(() => {
-      setNotifications((prev) => [
-        ...prev,
-        { id: Date.now(), level: 'critical', title: 'Critical Alert', body: 'High-confidence intrusion detected at Main Entrance - CAM-01', ts: new Date().toLocaleTimeString() },
-      ]);
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, [authChecked]);
 
   // Auth guard - redirect to login if no active Supabase session
   useEffect(() => {
@@ -729,12 +709,14 @@ export default function Dashboard() {
 
             {wizardStep === 1 && (
               <>
-                <p className="ls-desc">Scan your network for ONVIF-compatible devices, or enter stream details manually.</p>
+                <p className="ls-desc">Enter your camera stream details manually or use ONVIF auto-scan if supported by your network.</p>
                 <div className="wizard-fields">
                   <label className="search-field"><span>Camera ID</span><input value={newCamera.id} onChange={(e) => setNewCamera((p) => ({ ...p, id: e.target.value }))} placeholder="CAM-10" /></label>
                   <label className="search-field"><span>Display Name</span><input value={newCamera.name} onChange={(e) => setNewCamera((p) => ({ ...p, name: e.target.value }))} placeholder="South Perimeter" /></label>
                   <label className="search-field"><span>Location</span><input value={newCamera.location} onChange={(e) => setNewCamera((p) => ({ ...p, location: e.target.value }))} placeholder="south_entrance" /></label>
                   <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://..." /></label>
+                  <label className="search-field"><span>Latitude (optional)</span><input type="number" step="any" value={newCamera.lat} onChange={(e) => setNewCamera((p) => ({ ...p, lat: e.target.value }))} placeholder="e.g. 45.8154" /></label>
+                  <label className="search-field"><span>Longitude (optional)</span><input type="number" step="any" value={newCamera.lng} onChange={(e) => setNewCamera((p) => ({ ...p, lng: e.target.value }))} placeholder="e.g. 15.9819" /></label>
                 </div>
                 <div className="wizard-actions">
                   <button className="ghost-button" type="button" onClick={runONVIFScan} disabled={wizardScanning}>
@@ -749,7 +731,7 @@ export default function Dashboard() {
 
             {wizardStep === 2 && (
               <>
-                <p className="ls-desc">Review the camera configuration before saving to Supabase.</p>
+                <p className="ls-desc">Review the camera configuration before saving to the database.</p>
                 <table className="wizard-review-table">
                   <tbody>
                     {Object.entries(newCamera).map(([k, v]) => (
@@ -1264,7 +1246,7 @@ export default function Dashboard() {
                   <input
                     value={addCamForm.rtsp_url}
                     onChange={(e) => setAddCamForm((p) => ({ ...p, rtsp_url: e.target.value }))}
-                    placeholder="rtsp://192.168.1.x:554/stream"
+                    placeholder="rtsp://your-camera-ip:554/stream"
                     required
                   />
                 </label>
@@ -1274,6 +1256,26 @@ export default function Dashboard() {
                     value={addCamForm.location}
                     onChange={(e) => setAddCamForm((p) => ({ ...p, location: e.target.value }))}
                     placeholder="e.g. back_yard"
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Latitude (optional)</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={addCamForm.lat}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, lat: e.target.value }))}
+                    placeholder="e.g. 45.8154"
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Longitude (optional)</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={addCamForm.lng}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, lng: e.target.value }))}
+                    placeholder="e.g. 15.9819"
                   />
                 </label>
                 <div className="add-cam-actions">
