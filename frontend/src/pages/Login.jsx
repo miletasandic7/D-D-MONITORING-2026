@@ -21,7 +21,7 @@ const PAGE_CSS = `
   .lc-field{display:grid;gap:.45rem;}
   .lc-field span{font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;color:#8ccfff;}
   .lc-field input{width:100%;border-radius:12px;border:1px solid rgba(109,162,255,.22);background:rgba(4,10,28,.86);color:#ecf7ff;padding:.9rem 1rem;outline:none;font-family:inherit;font-size:1rem;transition:border-color 180ms,box-shadow 180ms;}
-  .lc-field input::placeholder{color:#4e6580;}
+  .lc-field input::placeholder{color:#6a8aaa;}
   .lc-field input:focus{border-color:rgba(80,208,255,.75);box-shadow:0 0 0 1px rgba(67,206,255,.18),0 0 22px rgba(63,181,255,.18);}
   .lc-btn{margin-top:.4rem;width:100%;border:0;border-radius:12px;padding:1.05rem;cursor:pointer;font-family:'Orbitron',sans-serif;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.2em;color:#03101c;background:linear-gradient(135deg,#00d4ff 0%,#8c4dff 52%,#ff55cc 100%);box-shadow:0 4px 20px rgba(0,212,255,.2);transition:transform 180ms,filter 180ms;}
   .lc-btn:hover{transform:translateY(-2px);filter:brightness(1.10);}
