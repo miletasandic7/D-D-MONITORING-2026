@@ -17,7 +17,13 @@ const hasDatabase = Boolean(connectionString) && Boolean(Pool);
 const pool = hasDatabase
   ? new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
+      ssl: { 
+        rejectUnauthorized: false,
+        mode: 'require'
+      },
+      max: 10, // Maximum pool size for transaction pooler
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     })
   : null;
 
