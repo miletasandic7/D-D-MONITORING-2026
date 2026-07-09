@@ -233,7 +233,7 @@ export default function Login() {
           <p className="pg-tagline">Neon-grade surveillance intelligence for cameras, detections and live threat awareness.</p>
         </header>
 
-        <div className="pg-grid">
+        <main className="pg-grid">
           {/* LEFT — Pricing plans */}
           <div className="pr">
             <div>
@@ -346,7 +346,7 @@ export default function Login() {
               <button type="submit" className="lc-btn">Enter Secure Console</button>
             </form>
           </section>
-        </div>
+        </main>
 
         <footer className="pg-footer">
           <p className="pg-footer-text">&#xA9; 2026 D&amp;D Security Dashboard. All rights reserved.</p>

@@ -1,0 +1,6 @@
+# robots.txt for D&D Security Dashboard
+# Allow all crawlers full access
+User-agent: *
+Allow: /
+
+Sitemap: https://d-d-monitoring-2026.vercel.app/sitemap.xml
