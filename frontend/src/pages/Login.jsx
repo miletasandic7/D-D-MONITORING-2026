@@ -25,6 +25,9 @@ const PAGE_CSS = `
   .lc-field input:focus{border-color:rgba(80,208,255,.75);box-shadow:0 0 0 1px rgba(67,206,255,.18),0 0 22px rgba(63,181,255,.18);}
   .lc-btn{margin-top:.4rem;width:100%;border:0;border-radius:12px;padding:1.05rem;cursor:pointer;font-family:'Orbitron',sans-serif;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.2em;color:#03101c;background:linear-gradient(135deg,#00d4ff 0%,#8c4dff 52%,#ff55cc 100%);box-shadow:0 4px 20px rgba(0,212,255,.2);transition:transform 180ms,filter 180ms;}
   .lc-btn:hover{transform:translateY(-2px);filter:brightness(1.10);}
+  .lc-remember{display:flex;align-items:center;gap:.55rem;font-size:.82rem;color:#a9c7e6;cursor:pointer;user-select:none;margin-top:-.2rem;}
+  .lc-remember input{width:16px;height:16px;accent-color:#00d4ff;cursor:pointer;}
+  .lc-remember span{letter-spacing:.04em;}
   .pr{display:flex;flex-direction:column;gap:1.5rem;}
   .pr-eyebrow{font-size:.7rem;letter-spacing:.34em;text-transform:uppercase;color:#8ee8ff;margin-bottom:.35rem;}
   .pr-heading{font-family:'Orbitron',sans-serif;font-size:clamp(1rem,2vw,1.4rem);font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#dff5ff;margin-bottom:.45rem;}
@@ -131,8 +134,13 @@ const PLANS = [
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => (
+    typeof window !== 'undefined' ? (localStorage.getItem('ddRememberedEmail') || '') : ''
+  ));
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => (
+    typeof window !== 'undefined' ? Boolean(localStorage.getItem('ddRememberedEmail')) : false
+  ));
   const ppRef = useRef(null);
   const [planId, setPlanId] = useState('growth');
   const [step, setStep] = useState('plans');
@@ -215,6 +223,11 @@ export default function Login() {
       }
       if (data.user) {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
+        if (rememberMe) {
+          localStorage.setItem('ddRememberedEmail', email);
+        } else {
+          localStorage.removeItem('ddRememberedEmail');
+        }
         navigate('/dashboard');
       }
     } catch (err) {
@@ -342,6 +355,14 @@ export default function Login() {
                   required
                   autoComplete="current-password"
                 />
+              </label>
+              <label className="lc-remember">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <span>Remember my password</span>
               </label>
               <button type="submit" className="lc-btn">Enter Secure Console</button>
             </form>

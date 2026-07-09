@@ -771,7 +771,6 @@ export default function Dashboard() {
           <a className="sidebar-nav-item" href="#cameras">Cameras</a>
           <a className="sidebar-nav-item" href="#events">Incidents</a>
           <a className="sidebar-nav-item" href="#audit">Audit Trail</a>
-          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>D&amp;D Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
@@ -791,142 +790,6 @@ export default function Dashboard() {
             <button className="primary-button" type="button">New Alert</button>
           </div>
         </header>
-
-        {/* -- Subscription / Billing Panel -- */}
-        {showBilling && (
-          <section className="dashboard-panel billing-panel" id="billing">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">License Management</p>
-                <h3>Client Plans &amp; Checkout</h3>
-              </div>
-              <button className="notif-dismiss" type="button" onClick={() => setShowBilling(false)}>&#x2715;</button>
-            </div>
-
-            <div className="billing-grid billing-grid-wide">
-              <div className="billing-tier-card billing-plan-list">
-                <p className="eyebrow">Available packages</p>
-                <div className="plan-grid">
-                  {PLAN_OPTIONS.map((plan) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      className={`plan-card${selectedPlanId === plan.id ? ' plan-card-active' : ''}`}
-                      onClick={() => {
-                        setSelectedPlanId(plan.id);
-                        addAuditEntry(`Selected package ${plan.name}`);
-                      }}
-                    >
-                      <div className="plan-card-top">
-                        <strong>{plan.name}</strong>
-                        <span>{plan.price}</span>
-                      </div>
-                      <ul className="plan-card-features">
-                        {plan.features.map((feature) => (
-                          <li key={feature}>{feature}</li>
-                        ))}
-                      </ul>
-                    </button>
-                  ))}
-                </div>
-                <div className="purchase-note">
-                  <span className="status-pill neutral">PayPal checkout</span>
-                  <p>Secret key stays server-side. Client ID only initializes the checkout flow.</p>
-                </div>
-              </div>
-
-              <div className="billing-upgrade-card">
-                <p className="eyebrow">Billing controls</p>
-                <h4>{selectedPlan.name}</h4>
-                <p className="ls-desc">{selectedPlan.price}</p>
-
-                <div className="checkout-stepper">
-                  <span className={paymentStep === 'details' ? 'step-active' : ''}>1. Contacts</span>
-                  <span className={paymentStep === 'checkout' ? 'step-active' : ''}>2. PayPal</span>
-                  <span className={paymentStep === 'complete' ? 'step-active' : ''}>3. Activated</span>
-                </div>
-
-                <div className="contact-grid">
-                  <label className="search-field">
-                    <span>District</span>
-                    <input required value={emergencyDistrict} onChange={(e) => setEmergencyDistrict(e.target.value)} placeholder="District / county" />
-                  </label>
-                  <label className="search-field">
-                    <span>Police station number</span>
-                    <input required value={emergencyContacts.policeStation} onChange={(e) => setEmergencyContacts((prev) => ({ ...prev, policeStation: e.target.value }))} placeholder="110 / local number" />
-                  </label>
-                  <label className="search-field">
-                    <span>Fire service number</span>
-                    <input required value={emergencyContacts.fireService} onChange={(e) => setEmergencyContacts((prev) => ({ ...prev, fireService: e.target.value }))} placeholder="112 / local number" />
-                  </label>
-                  <label className="search-field">
-                    <span>Ambulance / medical</span>
-                    <input required value={emergencyContacts.ambulance} onChange={(e) => setEmergencyContacts((prev) => ({ ...prev, ambulance: e.target.value }))} placeholder="medical emergency number" />
-                  </label>
-                  <label className="search-field">
-                    <span>Local command center</span>
-                    <input required value={emergencyContacts.localCommand} onChange={(e) => setEmergencyContacts((prev) => ({ ...prev, localCommand: e.target.value }))} placeholder="district command / dispatch" />
-                  </label>
-                </div>
-
-                <button className="ghost-button plan-cta" type="button" onClick={startCheckout}>
-                  {selectedPlanSupportsPaypal ? 'Start PayPal checkout' : 'Request custom invoice'}
-                </button>
-
-                <div className="checkout-meta">
-                  <span className={`status-pill ${requiredEmergencyFields ? 'good' : 'warning'}`}>
-                    {requiredEmergencyFields ? 'Contacts complete' : 'Contacts required'}
-                  </span>
-                  {paypalClientId ? (
-                    <span className="status-pill good">PayPal client ready</span>
-                  ) : (
-                    <span className="status-pill warning">Missing VITE_PAYPAL_CLIENT_ID</span>
-                  )}
-                </div>
-
-                {paymentStep === 'checkout' && selectedPlanSupportsPaypal && (
-                  <div className="paypal-button-shell">
-                    <div className="paypal-button-header">
-                      <span className="status-pill good">PayPal secure checkout</span>
-                      <span className="subtle-chip">{selectedPlan.name}</span>
-                    </div>
-                    <div className="paypal-buttons-host" ref={paypalButtonsRef} aria-live="polite" />
-                    {(paypalMounting || paypalMountError) && (
-                      <p className={`checkout-status ${paypalMountError ? 'checkout-status-error' : ''}`}>
-                        {paypalMountError || 'Loading PayPal buttons...'}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {paymentStep === 'checkout' && !selectedPlanSupportsPaypal && (
-                  <div className="paypal-button-shell">
-                    <p className="checkout-status">All plans are available for instant PayPal checkout.</p>
-                  </div>
-                )}
-
-                {checkoutStatus && <p className="checkout-status">{checkoutStatus}</p>}
-
-                <div className="branding-group">
-                  <p className="eyebrow" style={{marginBottom:'.6rem'}}>White-Label Mode</p>
-                  <div className="branding-toggle-row">
-                    <button
-                      type="button"
-                      className={`branding-option${brandMode === 'default' ? ' branding-active' : ''}`}
-                      onClick={() => { setBrandMode('default'); addAuditEntry('Switched branding to D&D Security Default'); }}
-                    >D&D Security Default</button>
-                    <button
-                      type="button"
-                      className={`branding-option${brandMode === 'corporate' ? ' branding-active' : ''}`}
-                      onClick={() => { setBrandMode('corporate'); addAuditEntry('Switched branding to Corporate White-Label mode'); }}
-                    >Corporate White-Label</button>
-                  </div>
-                  <p className="ls-desc" style={{marginTop:'.6rem'}}>Active: <strong style={{color:'#85dfff'}}>{brandName}</strong></p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* -- Smart Search v2 + False Alarm controls -- */}
         <section className="search-panel dashboard-panel" id="search" aria-label="Smart search filters">
@@ -1040,7 +903,6 @@ export default function Dashboard() {
               <p className="eyebrow">Alarm response</p>
               <h3>Map, location, and auto-report</h3>
             </div>
-            <button className="ghost-button" type="button" onClick={() => setShowBilling(true)}>Open Packages</button>
           </div>
 
           <div className="alarm-grid">
