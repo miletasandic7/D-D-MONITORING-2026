@@ -153,6 +153,23 @@ const DASH_CSS = `
   .notif-x{background:none;border:none;color:#6a8aaa;cursor:pointer;font-size:1rem;margin-left:auto;flex-shrink:0;}
   @media(max-width:1024px){.ds-top-row{grid-template-columns:1fr;}.ds-metrics{grid-template-columns:1fr 1fr;}}
   @media(max-width:700px){.ds-sidebar{display:none;}.ds-main{padding:1.25rem 1rem 3rem;}.ds-metrics{grid-template-columns:1fr;}.cam-grid{grid-template-columns:1fr;}.vv-meta{grid-template-columns:1fr 1fr;}}
+  .cam-card-header{position:relative;}
+  .snooze-btn{background:none;border:none;cursor:pointer;padding:.2rem .3rem;color:#8ab0c9;font-size:.88rem;border-radius:5px;transition:color 150ms,background 150ms;line-height:1;flex-shrink:0;}
+  .snooze-btn:hover{color:#ffa500;background:rgba(255,165,0,.1);}
+  .snooze-btn.snoozed{color:#ffa500;}
+  .snooze-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:50;background:rgba(6,12,30,.97);border:1px solid rgba(87,125,196,.3);border-radius:10px;padding:.3rem;min-width:148px;box-shadow:0 8px 28px rgba(0,0,0,.55);}
+  .snooze-menu-item{display:block;width:100%;text-align:left;background:none;border:none;color:#c8dff5;font-size:.78rem;font-family:inherit;padding:.45rem .75rem;border-radius:7px;cursor:pointer;transition:background 120ms,color 120ms;white-space:nowrap;}
+  .snooze-menu-item:hover{background:rgba(87,125,196,.15);color:#dff7ff;}
+  .snooze-menu-item.unsnooze{color:#ffa500;}
+  .handoff-modal{max-width:600px;width:100%;background:linear-gradient(160deg,rgba(8,14,32,.98),rgba(3,7,18,.99));border:1px solid rgba(87,140,255,.22);border-radius:20px;padding:1.75rem;max-height:85vh;display:flex;flex-direction:column;}
+  .handoff-title{font-family:'Orbitron',sans-serif;font-size:.92rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#dff7ff;margin-bottom:1rem;}
+  .handoff-md{flex:1;overflow-y:auto;background:rgba(4,10,28,.85);border:1px solid rgba(87,125,196,.18);border-radius:10px;padding:1rem 1.1rem;font-size:.82rem;color:#c8dff5;line-height:1.65;white-space:pre-wrap;font-family:'Space Grotesk',monospace;margin-bottom:1rem;min-height:200px;}
+  .dispatch-section{border-top:1px solid rgba(87,125,196,.12);padding:.75rem 1.5rem .85rem;display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;}
+  .dispatch-label{font-size:.63rem;text-transform:uppercase;letter-spacing:.18em;color:#6a8aaa;flex-shrink:0;margin-right:.15rem;}
+  .dispatch-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .85rem;border-radius:8px;border:1px solid rgba(87,125,196,.25);background:rgba(87,125,196,.08);color:#8ab0c9;font-size:.74rem;font-family:inherit;cursor:pointer;text-decoration:none;transition:border-color 150ms,color 150ms,background 150ms;white-space:nowrap;}
+  .dispatch-btn:hover{border-color:rgba(0,212,255,.4);color:#dff7ff;background:rgba(0,212,255,.07);}
+  .dispatch-btn.police{border-color:rgba(255,100,50,.3);color:#ff8060;}
+  .dispatch-btn.police:hover{border-color:rgba(255,100,50,.6);background:rgba(255,100,50,.07);}
 `;
 
 const SOP_REASONS = [
@@ -166,6 +183,16 @@ const ACTIVE_INCIDENT_STATUSES = ['New', 'Acknowledged', 'In Progress'];
 const CRITICAL_BEEP_DURATION_SECONDS = 0.15;
 const CRITICAL_BEEP_INTERVAL_MS = 3000;
 const CRITICAL_BEEP_INITIAL_GAIN = 0.0001;
+const SNOOZE_OPTIONS = [
+  { label: '30 minutes', minutes: 30 },
+  { label: '2 hours',    minutes: 120 },
+  { label: 'End of shift (8 h)', minutes: 480 },
+];
+
+function isCamSnoozed(snoozedMap, camId) {
+  const exp = snoozedMap[camId];
+  return !!(exp && Date.now() < exp);
+}
 
 function fmtTs(raw) {
   if (!raw) return '—';
@@ -296,6 +323,14 @@ function VVModal({ inc, camName, onClose }) {
               <div className="vv-meta-item"><span>Confidence</span><strong>{inc.confidence ? `${Math.round(Number(inc.confidence) * 100)}%` : '—'}</strong></div>
             </div>
 
+            {/* Feature: Live Dispatch Quick-Dial */}
+            <div className="dispatch-section">
+              <span className="dispatch-label">Quick Dial:</span>
+              <a className="dispatch-btn" href="tel:0601234567">📞 Security Guard: 060-123-4567</a>
+              <a className="dispatch-btn" href="tel:0601234568">📞 Shift Supervisor</a>
+              <a className="dispatch-btn police" href="tel:192">🚔 Alert Police: 192</a>
+            </div>
+
             <div className="vv-footer">
               <Dialog.Close asChild>
                 <button className="btn-ghost">Close</button>
@@ -364,6 +399,66 @@ function SOPModal({ inc, camName, onConfirm, onClose, saving }) {
   );
 }
 
+/* ── Feature: Shift Handoff Modal ── */
+function HandoffModal({ incidents, cameras, sessionResolvedCount, sessionStart, currentUser, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const activeIncidents = incidents.filter(isActiveIncident);
+  const now = new Date();
+
+  const lines = [
+    '# Shift Handoff Report',
+    `**Generated:** ${now.toLocaleString()}`,
+    `**Operator:** ${currentUser?.name || currentUser?.email || 'Operator'}`,
+    '',
+    '## Session Summary',
+    `- **Session Start:** ${sessionStart.toLocaleString()}`,
+    `- **Incidents Resolved This Session:** ${sessionResolvedCount}`,
+    `- **Active Alerts Remaining:** ${activeIncidents.length}`,
+    `- **Active Cameras:** ${cameras.filter(c => c.enabled !== false).length} / ${cameras.length}`,
+    '',
+    '## Active Incidents',
+    ...(activeIncidents.length === 0
+      ? ['_No active incidents._']
+      : activeIncidents.map(i => {
+          const camName = cameras.find(c => c.id === i.camera_id)?.name || i.camera_id || '—';
+          return `- [${getThreat(i)}] #${i.event_id} — ${camName} · ${i.status || 'New'}`;
+        })),
+    '',
+    '## Notes',
+    '_Add any additional notes before handoff._',
+  ];
+  const md = lines.join('\n');
+
+  const copy = () => {
+    navigator.clipboard.writeText(md)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2200); })
+      .catch(() => {});
+  };
+
+  return (
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="modal-overlay">
+          <Dialog.Content className="handoff-modal">
+            <VisuallyHidden><Dialog.Title>Shift Handoff Report</Dialog.Title></VisuallyHidden>
+            <VisuallyHidden><Dialog.Description>Auto-generated shift handoff summary for the current operator session.</Dialog.Description></VisuallyHidden>
+            <p className="handoff-title">📋 Shift Handoff Report</p>
+            <div className="handoff-md">{md}</div>
+            <div className="modal-actions">
+              <Dialog.Close asChild>
+                <button className="btn-ghost">Close</button>
+              </Dialog.Close>
+              <button className="btn-primary" onClick={copy} style={{ fontSize: '.72rem' }}>
+                {copied ? '✓ Copied!' : 'Copy to Clipboard'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 /* ── Main Dashboard ── */
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -384,6 +479,11 @@ export default function Dashboard() {
   const [sopSaving, setSopSaving] = useState(false);
   const alarmAudioCtxRef = useRef(null);
   const criticalAlarmIntervalRef = useRef(null);
+  const sessionStartRef = useRef(new Date());
+  const [snoozedCameras, setSnoozedCameras] = useState({});
+  const [snoozeMenuCam, setSnoozeMenuCam] = useState(null);
+  const [sessionResolvedCount, setSessionResolvedCount] = useState(0);
+  const [showHandoff, setShowHandoff] = useState(false);
   const focusedGeo = buildGeo(cameras.find(c => c.enabled !== false) || cameras[0] || null);
   const isAdmin = currentUser?.role === 'admin';
 
@@ -408,7 +508,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!incidentsLoaded) return;
-    const hasActiveCritical = incidents.some(i => isActiveIncident(i) && getThreat(i) === 'CRITICAL');
+    const hasActiveCritical = incidents.some(
+      i => isActiveIncident(i) && getThreat(i) === 'CRITICAL' && !isCamSnoozed(snoozedCameras, i.camera_id)
+    );
     if (hasActiveCritical) {
       if (!criticalAlarmIntervalRef.current) {
         playAlarmBeep(alarmAudioCtxRef);
@@ -417,7 +519,7 @@ export default function Dashboard() {
       return;
     }
     stopAlarmLoop(criticalAlarmIntervalRef, alarmAudioCtxRef);
-  }, [incidents, incidentsLoaded]);
+  }, [incidents, incidentsLoaded, snoozedCameras]);
 
   useEffect(() => () => stopAlarmLoop(criticalAlarmIntervalRef, alarmAudioCtxRef), []);
 
@@ -430,6 +532,23 @@ export default function Dashboard() {
       else if (v.canPlayType('application/vnd.apple.mpegurl')) v.src = buildHlsUrl(cam.id);
     });
   }, [cameras, authChecked]);
+
+  useEffect(() => {
+    if (!snoozeMenuCam) return;
+    const close = () => setSnoozeMenuCam(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [snoozeMenuCam]);
+
+  const handleSnooze = (camId, minutes) => {
+    setSnoozedCameras(prev => ({ ...prev, [camId]: Date.now() + minutes * 60 * 1000 }));
+    setSnoozeMenuCam(null);
+  };
+
+  const handleUnsnooze = (camId) => {
+    setSnoozedCameras(prev => { const n = { ...prev }; delete n[camId]; return n; });
+    setSnoozeMenuCam(null);
+  };
 
   const handleSignOut = async () => {
     const s = await getSupabaseClient();
@@ -452,6 +571,7 @@ export default function Dashboard() {
       setIncidents(prev => prev.map(i => i.event_id === sopIncident.event_id
         ? { ...i, status: 'Resolved', dismissed_by: currentUser?.email, dismissed_by_name: currentUser?.name || currentUser?.email || 'Operator', resolution_reason: reason }
         : i));
+      setSessionResolvedCount(prev => prev + 1);
       setSopIncident(null);
     } catch (e) { alert('Failed to dismiss: ' + e.message); }
     finally { setSopSaving(false); }
@@ -509,6 +629,18 @@ export default function Dashboard() {
           />
         )}
 
+        {/* Feature: Shift Handoff */}
+        {showHandoff && (
+          <HandoffModal
+            incidents={incidents}
+            cameras={cameras}
+            sessionResolvedCount={sessionResolvedCount}
+            sessionStart={sessionStartRef.current}
+            currentUser={currentUser}
+            onClose={() => setShowHandoff(false)}
+          />
+        )}
+
         {showAddCam && (
           <div className="modal-overlay" role="dialog" aria-modal="true">
             <div className="modal-card">
@@ -553,6 +685,7 @@ export default function Dashboard() {
               <h1 className="ds-title">Dashboard</h1>
             </div>
             <div className="ds-topbar-actions">
+              <button className="btn-ghost btn-sm" onClick={() => setShowHandoff(true)}>📋 Shift Handoff</button>
               {isAdmin && <button className="btn-ghost btn-sm" onClick={() => setShowAddCam(true)}>+ Add Camera</button>}
             </div>
           </div>
@@ -590,11 +723,36 @@ export default function Dashboard() {
               <div className="cam-grid">
                 {cameras.length === 0
                   ? <div className="cam-nodata">No active streams connected</div>
-                  : cameras.map(cam => (
+                  : cameras.map(cam => {
+                    const snoozed = isCamSnoozed(snoozedCameras, cam.id);
+                    return (
                     <div key={cam.id} className="cam-card">
                       <div className="cam-card-header">
                         <span className="cam-name">{cam.name}</span>
                         <span className={`cam-status-dot ${cam.enabled !== false ? 'dot-live' : 'dot-off'}`} />
+                        {/* Snooze button */}
+                        <button
+                          className={`snooze-btn${snoozed ? ' snoozed' : ''}`}
+                          title={snoozed ? 'Camera snoozed — click to manage' : 'Snooze alarms for this camera'}
+                          aria-label="Snooze camera alarms"
+                          onClick={e => { e.stopPropagation(); setSnoozeMenuCam(prev => prev === cam.id ? null : cam.id); }}
+                        >
+                          {snoozed ? '🔕' : '🔔'}
+                        </button>
+                        {snoozeMenuCam === cam.id && (
+                          <div className="snooze-menu" onClick={e => e.stopPropagation()}>
+                            {snoozed && (
+                              <button className="snooze-menu-item unsnooze" onClick={() => handleUnsnooze(cam.id)}>
+                                ✓ Remove Snooze
+                              </button>
+                            )}
+                            {SNOOZE_OPTIONS.map(opt => (
+                              <button key={opt.minutes} className="snooze-menu-item" onClick={() => handleSnooze(cam.id, opt.minutes)}>
+                                🔕 {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <video id={`vid-${cam.id}`} className="cam-video" controls muted playsInline />
                       <div className="cam-talkdown">
@@ -603,7 +761,8 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           </div>
