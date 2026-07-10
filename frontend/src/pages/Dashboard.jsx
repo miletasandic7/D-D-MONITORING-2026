@@ -5,1223 +5,570 @@ import Hls from 'hls.js';
 import { getSupabaseClient } from '../services/supabaseClient';
 
 const hlsBaseUrl = (import.meta.env.VITE_HLS_BASE_URL || '/hls').replace(/\/$/, '');
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
-const paypalCurrency = import.meta.env.VITE_PAYPAL_CURRENCY || 'USD';
 
-let paypalSdkPromise = null;
+const DASH_CSS = `
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;500;600&display=swap');
+  .ds{min-height:100vh;font-family:'Space Grotesk',sans-serif;color:#e5eef7;background:radial-gradient(circle at 16% 18%,rgba(0,212,255,.12),transparent 24%),radial-gradient(circle at 82% 14%,rgba(140,77,255,.1),transparent 22%),linear-gradient(180deg,#050b16 0%,#040914 60%,#030710 100%);display:flex;}
+  .ds::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(87,125,196,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(87,125,196,.04) 1px,transparent 1px);background-size:68px 68px;opacity:.15;pointer-events:none;z-index:0;}
 
-function loadPayPalSdk(clientId, currency = 'USD') {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('PayPal SDK can only load in the browser.'));
-  }
+  /* Sidebar */
+  .ds-sidebar{position:relative;z-index:2;width:220px;min-height:100vh;background:rgba(4,8,22,.92);border-right:1px solid rgba(87,125,196,.12);padding:2rem 1.25rem;display:flex;flex-direction:column;gap:2rem;flex-shrink:0;}
+  .ds-brand{display:flex;align-items:center;gap:.75rem;}
+  .ds-brand-mark{width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(0,203,255,.45);box-shadow:0 0 16px rgba(0,173,255,.12);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;color:#00d4ff;}
+  .ds-brand-name{font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#dff5ff;line-height:1.3;}
+  .ds-nav{display:flex;flex-direction:column;gap:.25rem;}
+  .ds-nav a,.ds-nav button{display:block;padding:.55rem .85rem;border-radius:10px;font-size:.85rem;color:#8ab0c9;cursor:pointer;border:none;background:none;text-align:left;font-family:inherit;transition:background 150ms,color 150ms;width:100%;text-decoration:none;}
+  .ds-nav a:hover,.ds-nav button:hover{background:rgba(87,125,196,.12);color:#dff7ff;}
+  .ds-nav a.active,.ds-nav button.active{background:rgba(0,212,255,.08);color:#00d4ff;border:1px solid rgba(0,212,255,.18);}
+  .ds-user{font-size:.78rem;color:#6a8aaa;padding:.5rem .85rem;}
+  .ds-logout{margin-top:auto;padding-top:1rem;border-top:1px solid rgba(87,125,196,.12);}
 
-  if (window.paypal) {
-    return Promise.resolve(window.paypal);
-  }
+  /* Main */
+  .ds-main{position:relative;z-index:1;flex:1;padding:2rem 2rem 4rem;overflow-y:auto;min-width:0;}
+  .ds-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+  .ds-eyebrow{font-size:.68rem;letter-spacing:.3em;text-transform:uppercase;color:#8ee8ff;margin-bottom:.2rem;}
+  .ds-title{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#dff5ff;}
+  .ds-topbar-actions{display:flex;gap:.65rem;flex-wrap:wrap;}
 
-  if (!clientId) {
-    return Promise.reject(new Error('Missing PayPal client ID.'));
-  }
+  /* Buttons */
+  .btn-primary{padding:.65rem 1.4rem;border:0;border-radius:10px;cursor:pointer;font-family:'Orbitron',sans-serif;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:#03101c;background:linear-gradient(135deg,#00d4ff 0%,#8c4dff 52%,#ff55cc 100%);box-shadow:0 4px 18px rgba(0,212,255,.18);transition:transform 160ms,filter 160ms;}
+  .btn-primary:hover{transform:translateY(-2px);filter:brightness(1.1);}
+  .btn-ghost{padding:.6rem 1.2rem;border-radius:10px;border:1px solid rgba(87,125,196,.25);background:rgba(87,125,196,.08);color:#8ab0c9;font-size:.8rem;font-family:inherit;cursor:pointer;transition:border-color 150ms,color 150ms;}
+  .btn-ghost:hover{border-color:rgba(80,208,255,.4);color:#dff7ff;}
+  .btn-ghost:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-danger{padding:.5rem 1rem;border-radius:8px;border:1px solid rgba(255,80,80,.22);background:rgba(255,80,80,.07);color:#ff7676;font-size:.75rem;font-family:inherit;cursor:pointer;transition:background 150ms;}
+  .btn-danger:hover{background:rgba(255,80,80,.14);}
+  .btn-sm{padding:.38rem .85rem;font-size:.72rem;}
 
-  if (!paypalSdkPromise) {
-    paypalSdkPromise = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector('script[data-paypal-sdk="true"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => resolve(window.paypal));
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load PayPal SDK.')));
-        return;
-      }
+  /* Top Row: Map + Cameras */
+  .ds-top-row{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;}
 
-      const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons`;
-      script.async = true;
-      script.defer = true;
-      script.dataset.paypalSdk = 'true';
-      script.onload = () => resolve(window.paypal);
-      script.onerror = () => reject(new Error('Failed to load PayPal SDK.'));
-      document.body.appendChild(script);
-    }).finally(() => {
-      paypalSdkPromise = null;
-    });
-  }
+  /* Panel base */
+  .ds-panel{background:rgba(10,18,38,.85);border:1px solid rgba(87,140,255,.18);border-radius:18px;padding:1.5rem;}
+  .ds-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;}
+  .ds-panel-kicker{font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:#8ee8ff;margin-bottom:.2rem;}
+  .ds-panel-title{font-family:'Orbitron',sans-serif;font-size:.88rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#dff7ff;}
 
-  return paypalSdkPromise;
+  /* Live Map */
+  .map-container{position:relative;height:340px;border-radius:12px;overflow:hidden;background:rgba(4,10,28,.9);border:1px solid rgba(87,125,196,.15);}
+  .map-grid-h{position:absolute;top:50%;left:0;width:100%;height:1px;background:rgba(87,125,196,.15);}
+  .map-grid-v{position:absolute;left:50%;top:0;width:1px;height:100%;background:rgba(87,125,196,.15);}
+  .map-pin{position:absolute;width:14px;height:14px;border-radius:50%;background:#00d4ff;box-shadow:0 0 12px rgba(0,212,255,.7);transform:translate(-50%,-50%);transition:left .4s,top .4s;}
+  .map-pin::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(0,212,255,.4);animation:pulse-ring 1.8s ease-out infinite;}
+  @keyframes pulse-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+  .map-label{position:absolute;bottom:1rem;left:1rem;background:rgba(4,10,28,.88);border:1px solid rgba(87,125,196,.2);border-radius:8px;padding:.45rem .75rem;font-size:.78rem;color:#c8dff5;}
+  .map-coord{font-size:.7rem;color:#8ee8ff;margin-top:.2rem;}
+  .map-nodata{display:flex;align-items:center;justify-content:center;height:100%;color:#6a8aaa;font-size:.88rem;}
+
+  /* Camera Grid */
+  .cam-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;}
+  .cam-card{background:rgba(4,10,28,.8);border:1px solid rgba(87,125,196,.15);border-radius:12px;overflow:hidden;}
+  .cam-card-header{display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;border-bottom:1px solid rgba(87,125,196,.1);}
+  .cam-name{font-size:.78rem;font-weight:600;color:#c8dff5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cam-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot-live{background:#00d450;box-shadow:0 0 6px rgba(0,212,80,.6);}
+  .dot-off{background:#6a8aaa;}
+  .cam-video{width:100%;height:120px;object-fit:cover;background:#000;display:block;}
+  .cam-empty{display:flex;align-items:center;justify-content:center;height:120px;font-size:.75rem;color:#4a6a88;}
+  .cam-nodata{grid-column:1/-1;text-align:center;padding:2.5rem;color:#6a8aaa;font-size:.88rem;}
+  .cam-talkdown{display:flex;align-items:center;gap:.5rem;padding:.4rem .75rem;background:rgba(0,0,0,.2);}
+  .talkdown-btn{flex:1;padding:.3rem;border:1px solid rgba(87,125,196,.2);border-radius:6px;background:transparent;color:#8ab0c9;font-size:.7rem;font-family:inherit;cursor:pointer;transition:border-color 150ms,color 150ms;}
+  .talkdown-btn:hover{border-color:rgba(0,212,255,.4);color:#00d4ff;}
+  .talkdown-btn.active{border-color:rgba(255,165,0,.5);color:#ffa500;animation:blink-btn .8s ease infinite;}
+  @keyframes blink-btn{50%{opacity:.5}}
+
+  /* Metric Cards */
+  .ds-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.25rem;}
+  .metric-card{background:rgba(10,18,38,.85);border:1px solid rgba(87,140,255,.18);border-radius:18px;padding:1.5rem 1.6rem;position:relative;overflow:hidden;}
+  .metric-card::before{content:'';position:absolute;top:-30px;right:-20px;width:100px;height:100px;border-radius:50%;background:var(--mc-glow,rgba(0,212,255,.06));filter:blur(20px);pointer-events:none;}
+  .metric-label{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:#8ab0c9;margin-bottom:.6rem;}
+  .metric-value{font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;color:#dff5ff;line-height:1;margin-bottom:.4rem;}
+  .metric-value.cyan{color:#00d4ff;}
+  .metric-value.green{color:#00d450;}
+  .metric-value.orange{color:#ffa500;}
+  .metric-value.red{color:#ff6b6b;}
+  .metric-sub{font-size:.78rem;color:#6a8aaa;}
+  .metric-icon{position:absolute;top:1.25rem;right:1.25rem;font-size:1.5rem;opacity:.4;}
+
+  /* Alarms Table */
+  .alarms-panel{background:rgba(10,18,38,.85);border:1px solid rgba(87,140,255,.18);border-radius:18px;padding:1.5rem;}
+  .table-scroll{overflow-x:auto;}
+  .alarms-table{width:100%;border-collapse:collapse;font-size:.86rem;}
+  .alarms-table th{text-align:left;padding:.65rem 1rem;font-size:.66rem;text-transform:uppercase;letter-spacing:.16em;color:#8ee8ff;border-bottom:1px solid rgba(87,125,196,.2);font-weight:600;white-space:nowrap;}
+  .alarms-table td{padding:.8rem 1rem;border-bottom:1px solid rgba(87,125,196,.07);color:#c8dff5;vertical-align:middle;}
+  .alarms-table tbody tr:hover{background:rgba(87,125,196,.06);}
+  .alarms-table .empty{text-align:center;color:#6a8aaa;padding:2.5rem;}
+  .threat-badge{display:inline-block;padding:.2rem .65rem;border-radius:999px;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;}
+  .threat-LOW{background:rgba(80,180,255,.12);border:1px solid rgba(80,180,255,.3);color:#5bb4ff;}
+  .threat-MEDIUM{background:rgba(255,180,0,.1);border:1px solid rgba(255,180,0,.3);color:#ffb400;}
+  .threat-HIGH{background:rgba(255,100,50,.12);border:1px solid rgba(255,100,50,.3);color:#ff6432;}
+  .threat-CRITICAL{background:rgba(255,50,50,.15);border:1px solid rgba(255,50,50,.4);color:#ff4444;animation:blink-critical 1s ease infinite;}
+  @keyframes blink-critical{50%{opacity:.55}}
+  .status-chip{display:inline-block;padding:.18rem .6rem;border-radius:6px;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;}
+  .status-ACTIVE{background:rgba(255,100,50,.1);color:#ff6432;border:1px solid rgba(255,100,50,.25);}
+  .status-DISMISSED{background:rgba(87,125,196,.1);color:#6a8aaa;border:1px solid rgba(87,125,196,.18);}
+  .status-Resolved{background:rgba(0,212,80,.1);color:#00d450;border:1px solid rgba(0,212,80,.25);}
+  .status-default{background:rgba(255,180,0,.1);color:#ffb400;border:1px solid rgba(255,180,0,.2);}
+  .ts-text{font-size:.8rem;color:#c8dff5;white-space:nowrap;}
+  .ts-ago{font-size:.72rem;color:#6a8aaa;margin-top:.15rem;}
+  .dismiss-btn{padding:.35rem .9rem;border-radius:7px;border:1px solid rgba(0,212,255,.22);background:rgba(0,212,255,.06);color:#8ee8ff;font-size:.72rem;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background 150ms,border-color 150ms;}
+  .dismiss-btn:hover{background:rgba(0,212,255,.14);border-color:rgba(0,212,255,.45);}
+  .dismiss-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .dismissed-by{font-size:.75rem;color:#8ee8ff;}
+
+  /* Add Camera Modal */
+  .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(2,5,14,.88);display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+  .modal-card{max-width:520px;width:100%;background:linear-gradient(160deg,rgba(10,16,36,.97),rgba(4,8,22,.98));border:1px solid rgba(87,140,255,.22);border-radius:20px;padding:2rem 1.75rem;}
+  .modal-title{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#dff7ff;margin-bottom:1.25rem;}
+  .modal-form{display:grid;gap:.85rem;}
+  .field{display:grid;gap:.3rem;}
+  .field span{font-size:.67rem;text-transform:uppercase;letter-spacing:.16em;color:#8ccfff;}
+  .field input{border-radius:9px;border:1px solid rgba(109,162,255,.2);background:rgba(4,10,28,.85);color:#ecf7ff;padding:.65rem .85rem;outline:none;font-family:inherit;font-size:.9rem;transition:border-color 180ms;}
+  .field input:focus{border-color:rgba(80,208,255,.6);}
+  .modal-actions{display:flex;gap:.75rem;margin-top:.5rem;justify-content:flex-end;}
+
+  /* Notif */
+  .notif-stack{position:fixed;top:1.25rem;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.6rem;max-width:360px;}
+  .notif-banner{display:flex;align-items:flex-start;gap:.75rem;background:rgba(10,18,38,.96);border:1px solid rgba(87,140,255,.25);border-radius:12px;padding:.85rem 1rem;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+  .notif-dot{width:8px;height:8px;border-radius:50%;background:#ff6432;margin-top:.3rem;flex-shrink:0;}
+  .notif-body strong{font-size:.85rem;color:#dff7ff;display:block;}
+  .notif-body p{font-size:.78rem;color:#8ab0c9;margin-top:.15rem;}
+  .notif-x{background:none;border:none;color:#6a8aaa;cursor:pointer;font-size:1rem;margin-left:auto;flex-shrink:0;}
+
+  /* Responsive */
+  @media(max-width:1024px){.ds-top-row{grid-template-columns:1fr;}.ds-metrics{grid-template-columns:1fr 1fr;}}
+  @media(max-width:700px){.ds-sidebar{display:none;}.ds-main{padding:1.25rem 1rem 3rem;}.ds-metrics{grid-template-columns:1fr;}.cam-grid{grid-template-columns:1fr;}}
+`;
+
+function formatTimestamp(raw) {
+  if (!raw) return '—';
+  try {
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(raw));
+  } catch { return raw; }
 }
 
-
-const PLAN_OPTIONS = [
-  {
-    id: 'starter',
-    name: 'Standard Global',
-    price: '$500 / month',
-    paypalAmount: '500',
-    features: [
-      'Global monitoring for up to 5 active locations/cameras',
-      'Automated reports',
-      'Standard support',
-    ],
-  },
-  {
-    id: 'growth',
-    name: 'Business Global',
-    price: '$950 / month',
-    paypalAmount: '950',
-    features: [
-      'Advanced monitoring for up to 15 active locations/cameras',
-      'Accelerated AI reporting',
-      'Priority support',
-    ],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise Global',
-    price: '$1500 / month',
-    paypalAmount: '1500',
-    features: [
-      'Maximum capacity',
-      'Unlimited locations',
-      'Dedicated AI analytics',
-      '24/7 premium support',
-    ],
-  },
-];
-
-function buildHlsManifestUrl(cameraId) {
-  return `${hlsBaseUrl}/${cameraId}/index.m3u8`;
+function timeAgo(raw) {
+  if (!raw) return '';
+  try {
+    const diff = Date.now() - new Date(raw).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  } catch { return ''; }
 }
 
-function buildCameraGeo(camera) {
+function threatLevel(incident) {
+  const severity = (incident.severity || '').toUpperCase();
+  if (['CRITICAL', 'EMERGENCY'].includes(severity)) return 'CRITICAL';
+  if (['HIGH', 'DANGER'].includes(severity)) return 'HIGH';
+  if (['MEDIUM', 'WARNING'].includes(severity)) return 'MEDIUM';
+  const conf = Number(incident.confidence);
+  if (conf >= 0.9) return 'CRITICAL';
+  if (conf >= 0.75) return 'HIGH';
+  if (conf >= 0.5) return 'MEDIUM';
+  return 'LOW';
+}
+
+function buildHlsUrl(camId) {
+  return `${hlsBaseUrl}/${camId}/index.m3u8`;
+}
+
+function buildGeo(camera) {
   return {
-    lat: Number(camera?.lat ?? 0),
-    lng: Number(camera?.lng ?? 0),
-    label: camera?.name || camera?.id || 'Unknown location',
-    note: camera?.location || 'Security perimeter point',
+    lat: Number(camera?.lat ?? 45.815),
+    lng: Number(camera?.lng ?? 15.98),
+    label: camera?.name || camera?.id || 'Unknown',
+    note: camera?.location || 'Security perimeter',
   };
 }
 
-function buildIncidentReport(event, camera, contacts, plan) {
-  const cameraGeo = buildCameraGeo(camera);
-  return {
-    generated_at: new Date().toISOString(),
-    plan: plan?.name || 'Unselected',
-    incident: {
-      event_id: event?.eventId || null,
-      title: event?.title || 'Alarm Triggered',
-      status: event?.status || 'New',
-      confidence: event?.confidence ?? null,
-      camera_id: event?.camera_id || camera?.id || null,
-      camera_name: camera?.name || event?.source || 'Unknown camera',
-      location_label: cameraGeo.label,
-      location_note: cameraGeo.note,
-      coordinates: { lat: cameraGeo.lat, lng: cameraGeo.lng },
-      zone: event?.zone || camera?.location || 'unknown',
-      direction: event?.direction || 'unknown',
-      dwell_seconds: event?.dwell_seconds ?? null,
-      source: event?.source || 'system',
-      timestamp: event?.time || new Date().toISOString(),
-    },
-    emergency_contacts: contacts,
-  };
-}
-
-// Audio alarm - 3 beeps via Web Audio API
 function playAlarmBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     [0, 0.45, 0.9].forEach((delay) => {
       const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gainNode.gain.setValueAtTime(0.35, ctx.currentTime + delay);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'sine';
+      g.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
       osc.start(ctx.currentTime + delay);
       osc.stop(ctx.currentTime + delay + 0.35);
     });
-  } catch (e) { /* AudioContext unavailable or blocked */ }
+  } catch {}
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const paypalButtonsRef = useRef(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [incidents, setIncidents] = useState([]);
   const [incidentsLoaded, setIncidentsLoaded] = useState(false);
   const [cameras, setCameras] = useState([]);
-  const [updatingIncidentId, setUpdatingIncidentId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
   const [error, setError] = useState(null);
-
-  // Smart Search v2 filter state
-  const [filterCamera, setFilterCamera] = useState('');
-  const [filterZone, setFilterZone] = useState('');
-  const [filterDirection, setFilterDirection] = useState('');
-  const [filterDwellMin, setFilterDwellMin] = useState('');
-  const [filterObjectType, setFilterObjectType] = useState('');
-  const [filterColor, setFilterColor] = useState('');
-
-  // False Alarm suppression
-  const [suppressEnabled, setSuppressEnabled] = useState(false);
-  const [suppressThreshold, setSuppressThreshold] = useState(85);
-
-  // Phase 3 - Camera Onboarding Wizard
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
-  const [wizardScanning, setWizardScanning] = useState(false);
-  const [wizardSaving, setWizardSaving] = useState(false);
-  const [wizardDone, setWizardDone] = useState(false);
-  const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
-
-  // Inline camera add form
+  const [notifications, setNotifications] = useState([]);
+  const [talkdownActive, setTalkdownActive] = useState(null);
   const [showAddCam, setShowAddCam] = useState(false);
   const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
   const [addCamSaving, setAddCamSaving] = useState(false);
   const [addCamError, setAddCamError] = useState('');
+  const prevNewRef = useRef(null);
+  const focusedCam = cameras.find(c => c.enabled !== false) || cameras[0] || null;
+  const focusedGeo = buildGeo(focusedCam);
 
-  // Audio alarm incident count tracker
-  const prevNewIncidentsRef = useRef(null);
+  const isAdmin = currentUser?.role === 'admin';
 
-  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
-  const closeWizard = () => setWizardOpen(false);
-
-  const runONVIFScan = async () => {
-    setWizardScanning(true);
-    try {
-      const res = await api.get('/cameras/scan');
-      if (res.data?.rtsp_url) {
-        setNewCamera((prev) => ({ ...prev, rtsp_url: prev.rtsp_url || res.data.rtsp_url }));
-      }
-    } catch {
-      // Auto-scan not available - user enters RTSP URL manually
-    } finally {
-      setWizardScanning(false);
-    }
-  };
-
-  const saveCamera = async () => {
-    setWizardSaving(true);
-    try {
-      await api.post('/cameras', newCamera);
-      setCameras((prev) => [...prev, newCamera]);
-    } catch (err) {
-      setWizardDone(false);
-      alert(err?.response?.data?.error || err.message || 'Failed to save camera.');
-      setWizardSaving(false);
-      return;
-    } finally {
-      setWizardSaving(false);
-      setWizardDone(true);
-      setWizardStep(3);
-    }
-  };
-
-  // Phase 3 - Voice Talkdown
-  const [talkdownActive, setTalkdownActive] = useState(null);
-
-  // Phase 4 - Audit Log
-  const [auditLog, setAuditLog] = useState([]);
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-  const addAuditEntry = (action) => setAuditLog((prev) => [{ id: Date.now(), ts: new Date().toLocaleTimeString(), user: currentUser?.email || 'operator', action }, ...prev].slice(0, 50));
-
-  // Phase 4 - White-Label Branding
-  const [brandMode, setBrandMode] = useState('default'); // 'default' | 'corporate'
-  const brandName = brandMode === 'corporate' ? 'SecureOps Enterprise' : 'D&D Global AI Surveillance';
-  const brandInitial = brandMode === 'corporate' ? 'S' : 'D';
-
-  // Phase 4 - Subscription
-  const [showBilling, setShowBilling] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState('growth');
-  const [checkoutStatus, setCheckoutStatus] = useState('');
-  const [paymentStep, setPaymentStep] = useState('details');
-  const [emergencyDistrict, setEmergencyDistrict] = useState('');
-  const [emergencyContacts, setEmergencyContacts] = useState({
-    policeStation: '',
-    fireService: '',
-    ambulance: '',
-    localCommand: '',
-  });
-  const [selectedAlarmId, setSelectedAlarmId] = useState(null);
-  const [reportNotes, setReportNotes] = useState('');
-  const [paypalMountError, setPaypalMountError] = useState('');
-  const [paypalMounting, setPaypalMounting] = useState(false);
-
-  const selectedPlan = PLAN_OPTIONS.find((plan) => plan.id === selectedPlanId) || PLAN_OPTIONS[1];
-
-  const triggerTalkdown = (camId) => {
-    setTalkdownActive(camId);
-    const camName = cameras.find((c) => c.id === camId)?.name || camId;
-    addAuditEntry(`Triggered voice talkdown on ${camName}`);
-    setTimeout(() => setTalkdownActive(null), 5000);
-  };
-
-  const submitAddCamera = async (e) => {
-    e.preventDefault();
-    if (!addCamForm.name.trim() || !addCamForm.rtsp_url.trim()) {
-      setAddCamError('Camera name and RTSP URL are required.');
-      return;
-    }
-    setAddCamSaving(true);
-    setAddCamError('');
-    const id = `CAM-${String(cameras.length + 1).padStart(2, '0')}`;
-    const newCam = {
-      id,
-      name: addCamForm.name.trim(),
-      rtsp_url: addCamForm.rtsp_url.trim(),
-      location: addCamForm.location.trim() || id,
-      lat: addCamForm.lat ? Number(addCamForm.lat) : null,
-      lng: addCamForm.lng ? Number(addCamForm.lng) : null,
-      enabled: true,
-      resolution: '1920x1080',
-      fps: 30,
-      codec: 'H264',
-    };
-    try {
-      await api.post('/cameras', newCam);
-      setCameras((prev) => [...prev, newCam]);
-      setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
-      setShowAddCam(false);
-      addAuditEntry(`Added camera: ${newCam.name} (${id})`);
-    } catch (err) {
-      setAddCamError(err?.response?.data?.error || err.message || 'Failed to save camera.');
-    } finally {
-      setAddCamSaving(false);
-    }
-  };
-
-  const selectedPlanAmount = selectedPlan.paypalAmount;
-  const selectedPlanSupportsPaypal = Boolean(selectedPlanAmount);
-
-  const requiredEmergencyFields = [
-    emergencyDistrict,
-    emergencyContacts.policeStation,
-    emergencyContacts.fireService,
-    emergencyContacts.ambulance,
-    emergencyContacts.localCommand,
-  ].every((value) => String(value || '').trim().length > 0);
-
-  const openAlarmMap = (event) => {
-    setSelectedAlarmId(event.eventId);
-    addAuditEntry(`Opened alarm map for Event #${event.eventId}`);
-  };
-
-  const downloadReport = () => {
-    const blob = new Blob([JSON.stringify({ ...generatedReport, notes: reportNotes }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `alarm_report_event_${generatedReport.incident.event_id || 'unknown'}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    addAuditEntry(`Generated automatic report for Event #${generatedReport.incident.event_id || 'unknown'}`);
-  };
-
-  const startCheckout = () => {
-    if (!requiredEmergencyFields) {
-      setCheckoutStatus('Fill emergency contacts before checkout.');
-      return;
-    }
-
-    if (!paypalClientId) {
-      setCheckoutStatus('PayPal client ID is missing in VITE_PAYPAL_CLIENT_ID.');
-      return;
-    }
-
-    if (!selectedPlanSupportsPaypal) {
-      setCheckoutStatus('Select a package to continue with PayPal checkout.');
-      return;
-    }
-
-    setCheckoutStatus(`Opening PayPal checkout for ${selectedPlan.name}.`);
-    setPaymentStep('checkout');
-    addAuditEntry(`Prepared PayPal checkout for ${selectedPlan.name}`);
-  };
-
-  useEffect(() => {
-    if (paymentStep !== 'checkout') {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const mountButtons = async () => {
-      if (!requiredEmergencyFields) {
-        setCheckoutStatus('Fill emergency contacts before checkout.');
-        return;
-      }
-
-      if (!selectedPlanSupportsPaypal) {
-        setCheckoutStatus('Select a package to continue with PayPal checkout.');
-        return;
-      }
-
-      if (!paypalButtonsRef.current) {
-        return;
-      }
-
-      setPaypalMounting(true);
-      setPaypalMountError('');
-
-      try {
-        const paypal = await loadPayPalSdk(paypalClientId, paypalCurrency);
-        if (cancelled || !paypalButtonsRef.current) {
-          return;
-        }
-
-        paypalButtonsRef.current.innerHTML = '';
-
-        const buttons = paypal.Buttons({
-          style: {
-            layout: 'vertical',
-            shape: 'rect',
-            label: 'paypal',
-            height: 48,
-          },
-          createOrder: async () => {
-            const response = await api.post('/paypal/orders', {
-              planId: selectedPlan.id,
-              planName: selectedPlan.name,
-              amount: selectedPlanAmount,
-              currency: paypalCurrency,
-              district: emergencyDistrict,
-              contacts: emergencyContacts,
-            });
-
-            return response.data.id;
-          },
-          onApprove: async (data) => {
-            setPaypalMounting(true);
-            const response = await api.post(`/paypal/orders/${data.orderID}/capture`, {
-              planId: selectedPlan.id,
-            });
-
-            if (cancelled) {
-              return;
-            }
-
-            setPaymentStep('complete');
-            setCheckoutStatus(`PayPal payment completed: ${response.data.status || 'COMPLETED'}.`);
-            addAuditEntry(`Activated ${selectedPlan.name} via PayPal order ${data.orderID}`);
-          },
-          onCancel: () => {
-            if (!cancelled) {
-              setCheckoutStatus('PayPal checkout canceled.');
-            }
-          },
-          onError: (err) => {
-            if (!cancelled) {
-              setCheckoutStatus(err?.message || 'PayPal checkout failed.');
-            }
-          },
-        });
-
-        if (!buttons.isEligible()) {
-          setCheckoutStatus('PayPal buttons are not eligible in this browser.');
-          return;
-        }
-
-        await buttons.render(paypalButtonsRef.current);
-
-        if (!cancelled) {
-          setCheckoutStatus(`PayPal checkout ready for ${selectedPlan.name}.`);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPaypalMountError(err?.message || 'Failed to load PayPal checkout.');
-          setCheckoutStatus(err?.message || 'Failed to load PayPal checkout.');
-        }
-      } finally {
-        if (!cancelled) {
-          setPaypalMounting(false);
-        }
-      }
-    };
-
-    mountButtons();
-
-    return () => {
-      cancelled = true;
-      if (paypalButtonsRef.current) {
-        paypalButtonsRef.current.innerHTML = '';
-      }
-    };
-  }, [paymentStep, requiredEmergencyFields, selectedPlan.id, selectedPlan.name, selectedPlanAmount, selectedPlanSupportsPaypal, emergencyDistrict, emergencyContacts.policeStation, emergencyContacts.fireService, emergencyContacts.ambulance, emergencyContacts.localCommand]);
-
-  // Phase 3 - Push Notification Banner
-  const [notifications, setNotifications] = useState([]);
-  const dismissNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
-
-
-  // Auth guard - redirect to login if no active Supabase session
+  // Auth guard
   useEffect(() => {
     (async () => {
       try {
         const supabase = await getSupabaseClient();
-        if (!supabase) {
-          localStorage.removeItem('currentUser');
-          navigate('/', { replace: true });
-          return;
-        }
-
+        if (!supabase) { localStorage.removeItem('currentUser'); navigate('/', { replace: true }); return; }
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          // Clear stale session data
-          localStorage.removeItem('currentUser');
-          await supabase.auth.signOut();
-          navigate('/', { replace: true });
-        } else {
-          setAuthChecked(true);
-        }
-      } catch (err) {
-        localStorage.removeItem('currentUser');
-        navigate('/', { replace: true });
-      }
+        if (error || !session) { localStorage.removeItem('currentUser'); await supabase.auth.signOut(); navigate('/', { replace: true }); return; }
+        const stored = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        setCurrentUser(stored);
+        setAuthChecked(true);
+      } catch { localStorage.removeItem('currentUser'); navigate('/', { replace: true }); }
     })();
   }, [navigate]);
 
-  const systemStatus = {
-    label: 'Operational',
-    tone: 'good',
-  };
-
-  // Client-side filter + false-alarm suppression applied to incidents list
-  const filteredIncidents = incidents
-    .filter((item) => {
-      if (suppressEnabled && Number(item.confidence) < suppressThreshold / 100) return false;
-      if (filterCamera && String(item.camera_id || '').toLowerCase() !== filterCamera.toLowerCase()) return false;
-      if (filterZone && !String(item.zone || item.location || '').toLowerCase().includes(filterZone.toLowerCase())) return false;
-      if (filterDirection && !String(item.direction || '').toLowerCase().includes(filterDirection.toLowerCase())) return false;
-      if (filterDwellMin && Number(item.dwell_seconds || 0) < Number(filterDwellMin)) return false;
-      if (filterObjectType && !String(item.object_type || '').toLowerCase().includes(filterObjectType.toLowerCase())) return false;
-      if (filterColor) {
-        const hasColor = (item.attributes || []).some(
-          (a) => String(a.attribute_type || a.type || '').toLowerCase() === 'color' &&
-                 String(a.attribute_value || a.value || '').toLowerCase().includes(filterColor.toLowerCase())
-        );
-        if (!hasColor) return false;
-      }
-      return true;
-    });
-
-  const activeCameras = cameras.filter((camera) => camera.enabled !== false).length;
-  const recentAlerts = filteredIncidents.filter((incident) => ['New', 'Acknowledged', 'In Progress'].includes(incident.status)).length;
-
-  const recentEvents = filteredIncidents.slice(0, 20).map((item) => ({
-    id: `evt-${item.event_id}-${item.detection_id}`,
-    eventId: item.event_id,
-    title: `${item.object_type} detection`,
-    subtitle: item.subtitle || `Confidence ${Math.round(Number(item.confidence) * 100)}%`,
-    source: item.source || `Event #${item.event_id}`,
-    time: item.timestamp,
-    status: item.status || 'New',
-    confidence: item.confidence,
-    camera_id: item.camera_id,
-    zone: item.zone || item.location,
-    direction: item.direction,
-    dwell_seconds: item.dwell_seconds,
-  }));
-
-  const selectedAlarmEvent = recentEvents.find((event) => event.eventId === selectedAlarmId) || recentEvents[0] || null;
-  const selectedAlarmCamera = cameras.find((camera) => camera.id === selectedAlarmEvent?.camera_id) || cameras[0] || null;
-  const selectedAlarmGeo = buildCameraGeo(selectedAlarmCamera);
-  const generatedReport = buildIncidentReport(selectedAlarmEvent, selectedAlarmCamera, { district: emergencyDistrict, ...emergencyContacts }, selectedPlan);
-  const reportSummary = selectedAlarmEvent
-    ? `Alarm at ${selectedAlarmGeo.label} requires dispatch confirmation. Route to ${selectedAlarmGeo.note}.`
-    : 'No active alarm selected yet.';
-
-  // Only fetch data once auth is confirmed
+  // Fetch data
   useEffect(() => {
     if (!authChecked) return;
-
-    api
-      .get('/incidents')
-      .then((res) => {
-        setIncidents(res.data.incidents || []);
-        setIncidentsLoaded(true);
-      })
-      .catch((err) => setError(err.message));
+    api.get('/incidents').then(res => { setIncidents(res.data.incidents || []); setIncidentsLoaded(true); }).catch(err => setError(err.message));
+    api.get('/cameras').then(res => setCameras(res.data.cameras || [])).catch(() => setCameras([]));
   }, [authChecked]);
 
-  // Audio alarm: play 3 beeps when new 'New' incidents arrive
+  // Audio alarm
   useEffect(() => {
     if (!incidentsLoaded) return;
-    const newCount = incidents.filter((i) => i.status === 'New').length;
-    if (prevNewIncidentsRef.current !== null && newCount > prevNewIncidentsRef.current) {
-      playAlarmBeep();
-    }
-    prevNewIncidentsRef.current = newCount;
+    const n = incidents.filter(i => i.status === 'New').length;
+    if (prevNewRef.current !== null && n > prevNewRef.current) playAlarmBeep();
+    prevNewRef.current = n;
   }, [incidents, incidentsLoaded]);
 
-  // Fetch cameras once auth is confirmed
+  // HLS init
   useEffect(() => {
     if (!authChecked) return;
-
-    api
-      .get('/cameras')
-      .then((res) => setCameras(res.data.cameras))
-      .catch(() => setCameras([]));
-  }, [authChecked]);
-
-  // Initialize HLS for each camera video element
-  useEffect(() => {
-    if (!authChecked) return;
-
-    cameras.forEach((cam) => {
-      const video = document.getElementById(`video-${cam.id}`);
-      if (video) {
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(buildHlsManifestUrl(cam.id));
-          hls.attachMedia(video);
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = buildHlsManifestUrl(cam.id);
-        }
+    cameras.forEach(cam => {
+      const video = document.getElementById(`vid-${cam.id}`);
+      if (!video) return;
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(buildHlsUrl(cam.id));
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = buildHlsUrl(cam.id);
       }
     });
-  }, [cameras]);
+  }, [cameras, authChecked]);
 
-  // Evidence export: build a metadata JSON + simulated MP4 download
-  const exportEvidence = (event) => {
-    const metadata = {
-      export_version: '1.0',
-      exported_at: new Date().toISOString(),
-      incident: {
-        event_id: event.eventId,
-        title: event.title,
-        status: event.status,
-        confidence: event.confidence,
-        camera_id: event.camera_id || 'unknown',
-        zone: event.zone || 'unknown',
-        direction: event.direction || 'unknown',
-        dwell_seconds: event.dwell_seconds || null,
-        source: event.source,
-        timestamp: event.time,
-      },
-      video_clip: {
-        filename: `evidence_event_${event.eventId}_${Date.now()}.mp4`,
-        note: 'Clip URL will be populated from your video archive once storage is connected.',
-      },
-    };
-
-    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `evidence_event_${event.eventId}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+  const handleSignOut = async () => {
+    const supabase = await getSupabaseClient();
+    if (supabase) await supabase.auth.signOut();
+    localStorage.removeItem('currentUser');
+    navigate('/', { replace: true });
   };
 
-  const updateIncidentStatus = async (eventId, status) => {
+  const dismissAlarm = async (eventId) => {
+    setUpdatingId(eventId);
     try {
-      setUpdatingIncidentId(eventId);
-      await api.patch(`/incidents/${eventId}/status`, { status });
-      setIncidents((previous) => previous.map((incident) => (
-        incident.event_id === eventId ? { ...incident, status } : incident
-      )));
-      addAuditEntry(`Set Incident #${eventId} status to "${status}"`);
-    } catch (err) {
-      alert(`Failed to update incident: ${err.message}`);
-    } finally {
-      setUpdatingIncidentId(null);
-    }
+      await api.patch(`/incidents/${eventId}/status`, {
+        status: 'Resolved',
+        dismissed_by: currentUser?.email || null,
+        dismissed_by_name: currentUser?.name || currentUser?.email || 'Operator',
+      });
+      setIncidents(prev => prev.map(i => i.event_id === eventId
+        ? { ...i, status: 'Resolved', dismissed_by: currentUser?.email, dismissed_by_name: currentUser?.name || currentUser?.email || 'Operator' }
+        : i
+      ));
+    } catch (err) { alert('Failed to dismiss alarm: ' + err.message); }
+    finally { setUpdatingId(null); }
   };
 
-  const statusClassName = (status) => {
-    if (status === 'False Alarm') return 'neutral';
-    if (status === 'Resolved') return 'good';
-    if (status === 'In Progress' || status === 'Acknowledged') return 'warning';
-    return 'warning';
+  const submitAddCamera = async (e) => {
+    e.preventDefault();
+    if (!addCamForm.name.trim() || !addCamForm.rtsp_url.trim()) { setAddCamError('Camera name and RTSP URL are required.'); return; }
+    setAddCamSaving(true); setAddCamError('');
+    const id = `CAM-${String(cameras.length + 1).padStart(2, '0')}`;
+    const newCam = { id, name: addCamForm.name.trim(), rtsp_url: addCamForm.rtsp_url.trim(), location: addCamForm.location.trim() || id, lat: addCamForm.lat ? Number(addCamForm.lat) : null, lng: addCamForm.lng ? Number(addCamForm.lng) : null, enabled: true };
+    try {
+      await api.post('/cameras', newCam);
+      setCameras(prev => [...prev, newCam]);
+      setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+      setShowAddCam(false);
+    } catch (err) { setAddCamError(err?.response?.data?.error || err.message || 'Failed to save.'); }
+    finally { setAddCamSaving(false); }
   };
 
-  const nextActionsForStatus = (status) => {
-    switch (status) {
-      case 'New':
-        return ['Acknowledged', 'In Progress', 'False Alarm'];
-      case 'Acknowledged':
-        return ['In Progress', 'Resolved', 'False Alarm'];
-      case 'In Progress':
-        return ['Resolved', 'False Alarm'];
-      case 'Resolved':
-        return ['In Progress', 'False Alarm'];
-      case 'False Alarm':
-        return ['New', 'Acknowledged'];
-      default:
-        return ['Acknowledged'];
-    }
+  const triggerTalkdown = (camId) => {
+    setTalkdownActive(camId);
+    setTimeout(() => setTalkdownActive(null), 5000);
   };
 
   if (!authChecked) return null;
 
-  if (error) {
-    return (
-      <div className="dashboard-shell">
-        <aside className="sidebar">
-          <div>
-            <div className="brand-mark">D</div>
-            <h1 className="sidebar-title">D&D Global AI Surveillance</h1>
-            <p className="sidebar-copy">Security monitoring, detections, and camera intelligence.</p>
-          </div>
-        </aside>
-        <main className="dashboard-main">
-          <div className="topbar">
-            <div>
-              <p className="eyebrow">Security Command Center</p>
-              <h2>Dashboard</h2>
-            </div>
-          </div>
-          <section className="dashboard-panel">
-            <h3>Unable to load data</h3>
-            <p>{error}</p>
-          </section>
-        </main>
-      </div>
-    );
-  }
+  const activeCams = cameras.filter(c => c.enabled !== false).length;
+  const activeAlerts = incidents.filter(i => ['New', 'Acknowledged', 'In Progress'].includes(i.status)).length;
+
+  const statusChip = (status) => {
+    if (['Resolved', 'False Alarm'].includes(status)) return 'status-Resolved';
+    if (['New', 'In Progress', 'Acknowledged'].includes(status)) return 'status-ACTIVE';
+    return 'status-default';
+  };
 
   return (
-    <div className="dashboard-shell">
-      {/* -- Push Notification Banner -- */}
-      {notifications.length > 0 && (
-        <div className="notif-stack" role="alert" aria-live="assertive">
-          {notifications.map((n) => (
-            <div key={n.id} className={`notif-banner notif-${n.level}`}>
-              <span className="notif-dot" aria-hidden="true" />
-              <div className="notif-body">
-                <strong>{n.title}</strong>
-                <p>{n.body}</p>
+    <>
+      <style>{DASH_CSS}</style>
+      <div className="ds">
+
+        {/* Notification stack */}
+        {notifications.length > 0 && (
+          <div className="notif-stack" role="alert">
+            {notifications.map(n => (
+              <div key={n.id} className="notif-banner">
+                <span className="notif-dot" />
+                <div className="notif-body"><strong>{n.title}</strong><p>{n.body}</p></div>
+                <button className="notif-x" onClick={() => setNotifications(p => p.filter(x => x.id !== n.id))}>✕</button>
               </div>
-              <span className="notif-time">{n.ts}</span>
-              <button className="notif-dismiss" onClick={() => dismissNotification(n.id)} aria-label="Dismiss">&#x2715;</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* -- Camera Onboarding Wizard Modal -- */}
-      {wizardOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add new camera">
-          <section className="modal-card">
-            <div className="modal-header">
-              <h3>{wizardStep === 3 ? 'Camera Added' : 'Add New Camera'}</h3>
-              <button className="notif-dismiss" onClick={closeWizard} aria-label="Close">&#x2715;</button>
-            </div>
-
-            {wizardStep === 1 && (
-              <>
-                <p className="ls-desc">Enter your camera stream details manually or use ONVIF auto-scan if supported by your network.</p>
-                <div className="wizard-fields">
-                  <label className="search-field"><span>Camera ID</span><input value={newCamera.id} onChange={(e) => setNewCamera((p) => ({ ...p, id: e.target.value }))} placeholder="CAM-10" /></label>
-                  <label className="search-field"><span>Display Name</span><input value={newCamera.name} onChange={(e) => setNewCamera((p) => ({ ...p, name: e.target.value }))} placeholder="South Perimeter" /></label>
-                  <label className="search-field"><span>Location</span><input value={newCamera.location} onChange={(e) => setNewCamera((p) => ({ ...p, location: e.target.value }))} placeholder="south_entrance" /></label>
-                  <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://..." /></label>
-                  <label className="search-field"><span>Latitude (optional)</span><input type="number" step="any" value={newCamera.lat} onChange={(e) => setNewCamera((p) => ({ ...p, lat: e.target.value }))} placeholder="e.g. 45.8154" /></label>
-                  <label className="search-field"><span>Longitude (optional)</span><input type="number" step="any" value={newCamera.lng} onChange={(e) => setNewCamera((p) => ({ ...p, lng: e.target.value }))} placeholder="e.g. 15.9819" /></label>
-                </div>
-                <div className="wizard-actions">
-                  <button className="ghost-button" type="button" onClick={runONVIFScan} disabled={wizardScanning}>
-                    {wizardScanning ? 'Scanning network...' : 'Auto-scan (ONVIF)'}
-                  </button>
-                  <button className="primary-button" type="button" onClick={() => setWizardStep(2)} disabled={!newCamera.id || !newCamera.name}>
-                    Next
-                  </button>
-                </div>
-              </>
-            )}
-
-            {wizardStep === 2 && (
-              <>
-                <p className="ls-desc">Review the camera configuration before saving to the database.</p>
-                <table className="wizard-review-table">
-                  <tbody>
-                    {Object.entries(newCamera).map(([k, v]) => (
-                      <tr key={k}><td>{k}</td><td>{String(v)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="wizard-actions">
-                  <button className="ghost-button" type="button" onClick={() => setWizardStep(1)}>Back</button>
-                  <button className="primary-button" type="button" onClick={saveCamera} disabled={wizardSaving}>
-                    {wizardSaving ? 'Saving...' : 'Save to Database'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {wizardStep === 3 && (
-              <>
-                <p className="wizard-success">Camera <strong>{newCamera.name}</strong> was added successfully and is now visible in the Streams panel.</p>
-                <div className="wizard-actions">
-                  <button className="primary-button" type="button" onClick={closeWizard}>Done</button>
-                </div>
-              </>
-            )}
-          </section>
-        </div>
-      )}
-      <aside className="sidebar">
-        <div>
-          <div className="brand-mark">{brandInitial}</div>
-          <h1 className="sidebar-title">{brandName}</h1>
-          <p className="sidebar-copy">Security monitoring, detections, and camera intelligence.</p>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Dashboard navigation">
-          <a className="sidebar-nav-item active" href="#overview">Overview</a>
-          <a className="sidebar-nav-item" href="#cameras">Cameras</a>
-          <a className="sidebar-nav-item" href="#events">Incidents</a>
-          <a className="sidebar-nav-item" href="#audit">Audit Trail</a>
-        </nav>
-
-        <div className="sidebar-footer">
-          <span className={`status-pill ${systemStatus.tone}`}>{systemStatus.label}</span>
-          <p>Live monitoring enabled</p>
-        </div>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Security Command Center</p>
-            <h2 id="overview">Dashboard</h2>
+            ))}
           </div>
-          <div className="topbar-actions">
-            <button className="ghost-button" type="button" onClick={() => { setShowAddCam(true); setTimeout(() => document.getElementById('cameras')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>+ Add Camera</button>
-            <button className="primary-button" type="button">New Alert</button>
-          </div>
-        </header>
+        )}
 
-        {/* -- Smart Search v2 + False Alarm controls -- */}
-        <section className="search-panel dashboard-panel" id="search" aria-label="Smart search filters">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Smart Search v2</p>
-              <h3>Filter Incidents</h3>
-            </div>
-            <label className="suppress-toggle">
-              <input
-                type="checkbox"
-                checked={suppressEnabled}
-                onChange={(e) => setSuppressEnabled(e.target.checked)}
-              />
-              <span>Suppress below {suppressThreshold}% confidence</span>
-            </label>
-          </div>
-
-          {suppressEnabled && (
-            <div className="suppress-slider-row">
-              <span>50%</span>
-              <input
-                type="range" min="50" max="99" step="1"
-                value={suppressThreshold}
-                onChange={(e) => setSuppressThreshold(Number(e.target.value))}
-                className="suppress-slider"
-              />
-              <span>{suppressThreshold}%</span>
-            </div>
-          )}
-
-          <div className="search-grid">
-            <label className="search-field">
-              <span>Object Type</span>
-              <input type="text" placeholder="Person, Vehicle..." value={filterObjectType} onChange={(e) => setFilterObjectType(e.target.value)} />
-            </label>
-            <label className="search-field">
-              <span>Camera</span>
-              <select value={filterCamera} onChange={(e) => setFilterCamera(e.target.value)}>
-                <option value="">All cameras</option>
-                {cameras.map((cam) => (
-                  <option key={cam.id} value={cam.id}>{cam.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="search-field">
-              <span>Zone / Location</span>
-              <input type="text" placeholder="entrance, parking..." value={filterZone} onChange={(e) => setFilterZone(e.target.value)} />
-            </label>
-            <label className="search-field">
-              <span>Direction</span>
-              <select value={filterDirection} onChange={(e) => setFilterDirection(e.target.value)}>
-                <option value="">Any direction</option>
-                <option value="entering">Entering</option>
-                <option value="exiting">Exiting</option>
-                <option value="left">Left</option>
-                <option value="right">Right</option>
-              </select>
-            </label>
-            <label className="search-field">
-              <span>Min. Dwell (seconds)</span>
-              <input type="number" min="0" placeholder="0" value={filterDwellMin} onChange={(e) => setFilterDwellMin(e.target.value)} />
-            </label>
-            <label className="search-field">
-              <span>Color Attribute</span>
-              <input type="text" placeholder="Red, Black..." value={filterColor} onChange={(e) => setFilterColor(e.target.value)} />
-            </label>
-          </div>
-
-          {(filterObjectType || filterCamera || filterZone || filterDirection || filterDwellMin || filterColor || suppressEnabled) && (
-            <button
-              type="button"
-              className="ghost-button"
-              style={{ marginTop: '0.75rem', fontSize: '0.8rem' }}
-              onClick={() => {
-                setFilterObjectType('');
-                setFilterCamera('');
-                setFilterZone('');
-                setFilterDirection('');
-                setFilterDwellMin('');
-                setFilterColor('');
-                setSuppressEnabled(false);
-              }}
-            >
-              Clear all filters
-            </button>
-          )}
-        </section>
-
-        <section className="metrics-grid" aria-label="Key metrics">
-          <article className="metric-card">
-            <p className="metric-label">Active Cameras</p>
-            <strong>{cameras.length ? activeCameras : '-'}</strong>
-            <span>{cameras.length ? `${cameras.length} total streams` : 'Loading camera inventory'}</span>
-          </article>
-          <article className="metric-card">
-            <p className="metric-label">System Status</p>
-            <strong className="metric-accent">{systemStatus.label}</strong>
-            <span>Core services online</span>
-          </article>
-          <article className="metric-card">
-            <p className="metric-label">Recent Alerts</p>
-            <strong>{incidentsLoaded ? recentAlerts : '-'}</strong>
-            <span>Open incidents in queue</span>
-          </article>
-        </section>
-
-        <section className="dashboard-panel alarm-panel" id="alarm-map">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Alarm response</p>
-              <h3>Map, location, and auto-report</h3>
-            </div>
-          </div>
-
-          <div className="alarm-grid">
-            <div className="alarm-map-card">
-              <div className="alarm-map-header">
-                <span className="status-pill warning">Active alarm</span>
-                <span className="subtle-chip">{selectedAlarmEvent ? `Event #${selectedAlarmEvent.eventId}` : 'No active event'}</span>
-              </div>
-              <div className="alarm-map">
-                <div className="map-grid-line map-grid-x" />
-                <div className="map-grid-line map-grid-y" />
-                <div
-                  className="map-pin"
-                  style={{ left: `${Math.min(Math.max(((selectedAlarmGeo.lng - 15.94) / 0.06) * 100, 8), 92)}%`, top: `${Math.min(Math.max((1 - ((selectedAlarmGeo.lat - 45.80) / 0.03)) * 100, 10), 90)}%` }}
-                />
-                <div className="map-callout">
-                  <strong>{selectedAlarmGeo.label}</strong>
-                  <p>{selectedAlarmGeo.note}</p>
+        {/* Add Camera Modal */}
+        {showAddCam && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal-card">
+              <p className="modal-title">Add New Camera</p>
+              <form className="modal-form" onSubmit={submitAddCamera}>
+                <label className="field"><span>Camera Name</span><input value={addCamForm.name} onChange={e => setAddCamForm(p => ({ ...p, name: e.target.value }))} placeholder="South Perimeter" required autoFocus /></label>
+                <label className="field"><span>RTSP Stream URL</span><input value={addCamForm.rtsp_url} onChange={e => setAddCamForm(p => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://..." required /></label>
+                <label className="field"><span>Location (optional)</span><input value={addCamForm.location} onChange={e => setAddCamForm(p => ({ ...p, location: e.target.value }))} placeholder="south_entrance" /></label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
+                  <label className="field"><span>Latitude</span><input type="number" step="any" value={addCamForm.lat} onChange={e => setAddCamForm(p => ({ ...p, lat: e.target.value }))} placeholder="45.815" /></label>
+                  <label className="field"><span>Longitude</span><input type="number" step="any" value={addCamForm.lng} onChange={e => setAddCamForm(p => ({ ...p, lng: e.target.value }))} placeholder="15.98" /></label>
                 </div>
-              </div>
-              <div className="alarm-location-list">
-                <div>
-                  <span className="alarm-label">Exact location</span>
-                  <strong>{selectedAlarmGeo.label}</strong>
-                </div>
-                <div>
-                  <span className="alarm-label">Coordinates</span>
-                  <strong>{selectedAlarmGeo.lat.toFixed(4)}, {selectedAlarmGeo.lng.toFixed(4)}</strong>
-                </div>
-                <div>
-                  <span className="alarm-label">Explanation</span>
-                  <strong>{reportSummary}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="report-card">
-              <div className="panel-heading panel-heading-tight">
-                <div>
-                  <p className="eyebrow">Automatic report generator</p>
-                  <h4>Incident summary</h4>
-                </div>
-                <button type="button" className="ghost-button incident-action-button" onClick={downloadReport} disabled={!selectedAlarmEvent}>
-                  Download report
-                </button>
-              </div>
-
-              <label className="search-field">
-                <span>Report note</span>
-                <textarea
-                  rows="4"
-                  value={reportNotes}
-                  onChange={(e) => setReportNotes(e.target.value)}
-                  placeholder="Add dispatch notes, witness details, or response instructions..."
-                />
-              </label>
-
-              <div className="report-preview">
-                <pre>{JSON.stringify({ ...generatedReport, notes: reportNotes }, null, 2)}</pre>
-              </div>
-
-              <div className="report-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => {
-                    setPaymentStep('complete');
-                    addAuditEntry(`Auto-report generated for Event #${generatedReport.incident.event_id || 'unknown'}`);
-                  }}
-                >
-                  Mark as dispatched
-                </button>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => {
-                    if (selectedAlarmEvent) openAlarmMap(selectedAlarmEvent);
-                  }}
-                >
-                  Focus map on latest alarm
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="content-grid">
-          <section className="dashboard-panel table-panel" id="events">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Activity feed</p>
-                <h3>Recent Events</h3>
-              </div>
-              <span className="subtle-chip">Last 24h</span>
-            </div>
-
-            <div className="table-wrap">
-              <table className="events-table">
-                <thead>
-                  <tr>
-                    <th>Event</th>
-                    <th>Source</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                    <th>Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentEvents.length ? (
-                    recentEvents.map((event) => (
-                      <tr key={event.id}>
-                        <td>
-                          <div className="table-title">{event.title}</div>
-                          <div className="table-subtitle">{event.subtitle}</div>
-                        </td>
-                        <td>{event.source || event.subtitle}</td>
-                        <td>{event.time}</td>
-                        <td>
-                          <span className={`status-pill ${statusClassName(event.status)}`}>
-                            {event.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="incident-actions">
-                            {currentUser ? (
-                              nextActionsForStatus(event.status).map((nextStatus) => (
-                                <button
-                                  key={`${event.id}-${nextStatus}`}
-                                  type="button"
-                                  className="ghost-button incident-action-button"
-                                  onClick={() => updateIncidentStatus(event.eventId, nextStatus)}
-                                  disabled={updatingIncidentId === event.eventId}
-                                >
-                                  {updatingIncidentId === event.eventId ? 'Updating...' : nextStatus}
-                                </button>
-                              ))
-                            ) : (
-                              <span className="table-subtitle">Login required</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="ghost-button incident-action-button export-btn"
-                            onClick={() => { exportEvidence(event); setSelectedAlarmId(event.eventId); addAuditEntry(`Exported evidence package for Event #${event.eventId}`); }}
-                            title="Download evidence package (JSON + video metadata)"
-                          >
-                            Export
-                          </button>
-                          <button
-                            type="button"
-                            className="ghost-button incident-action-button"
-                            onClick={() => openAlarmMap(event)}
-                          >
-                            Show map
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="empty-state">
-                        {incidentsLoaded ? 'No incidents match the current filters.' : 'Loading incident queue...'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="dashboard-panel cameras-panel" id="cameras">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Camera matrix</p>
-                <h3>Streams</h3>
-              </div>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}
-              >
-                {showAddCam ? 'Cancel' : '+ Add Camera'}
-              </button>
-            </div>
-
-            {showAddCam && (
-              <form className="add-cam-form" onSubmit={submitAddCamera}>
-                <label className="search-field">
-                  <span>Camera Name</span>
-                  <input
-                    value={addCamForm.name}
-                    onChange={(e) => setAddCamForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. Back Yard"
-                    required
-                    autoFocus
-                  />
-                </label>
-                <label className="search-field">
-                  <span>RTSP Stream URL</span>
-                  <input
-                    value={addCamForm.rtsp_url}
-                    onChange={(e) => setAddCamForm((p) => ({ ...p, rtsp_url: e.target.value }))}
-                    placeholder="rtsp://your-camera-ip:554/stream"
-                    required
-                  />
-                </label>
-                <label className="search-field">
-                  <span>Location (optional)</span>
-                  <input
-                    value={addCamForm.location}
-                    onChange={(e) => setAddCamForm((p) => ({ ...p, location: e.target.value }))}
-                    placeholder="e.g. back_yard"
-                  />
-                </label>
-                <label className="search-field">
-                  <span>Latitude (optional)</span>
-                  <input
-                    type="number"
-                    step="any"
-                    value={addCamForm.lat}
-                    onChange={(e) => setAddCamForm((p) => ({ ...p, lat: e.target.value }))}
-                    placeholder="e.g. 45.8154"
-                  />
-                </label>
-                <label className="search-field">
-                  <span>Longitude (optional)</span>
-                  <input
-                    type="number"
-                    step="any"
-                    value={addCamForm.lng}
-                    onChange={(e) => setAddCamForm((p) => ({ ...p, lng: e.target.value }))}
-                    placeholder="e.g. 15.9819"
-                  />
-                </label>
-                <div className="add-cam-actions">
-                  {addCamError && <p className="checkout-status checkout-status-error">{addCamError}</p>}
-                  <button
-                    className="primary-button"
-                    type="submit"
-                    disabled={addCamSaving || !addCamForm.name.trim() || !addCamForm.rtsp_url.trim()}
-                  >
-                    {addCamSaving ? 'Saving...' : 'Add Camera'}
-                  </button>
+                {addCamError && <p style={{ color: '#ff7676', fontSize: '.82rem' }}>{addCamError}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="btn-ghost" onClick={() => setShowAddCam(false)}>Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={addCamSaving}>{addCamSaving ? 'Saving...' : 'Add Camera'}</button>
                 </div>
               </form>
-            )}
+            </div>
+          </div>
+        )}
 
-            <div className="camera-list">
-              {cameras.length ? (
-                cameras.map((cam) => (
-                  <article className="camera-card" key={cam.id}>
-                    <div className="camera-card-header">
-                      <div>
-                        <h4>{cam.name}</h4>
-                        <p>{cam.location || cam.rtsp_url}</p>
-                      </div>
-                      <span className={`status-pill ${cam.enabled !== false ? 'good' : 'neutral'}`}>
-                        {cam.enabled !== false ? 'Live' : 'Disabled'}
-                      </span>
+        {/* Sidebar */}
+        <aside className="ds-sidebar">
+          <div className="ds-brand">
+            <div className="ds-brand-mark">D</div>
+            <div className="ds-brand-name">D&amp;D Global AI Surveillance</div>
+          </div>
+          <nav className="ds-nav">
+            <button className="active">Dashboard</button>
+            {isAdmin && <button onClick={() => navigate('/operators')}>Team / Operators</button>}
+          </nav>
+          <div className="ds-user">{currentUser?.email || 'Operator'}<br /><span style={{ color: '#4a6a88', fontSize: '.72rem' }}>{currentUser?.role || 'operator'}</span></div>
+          <div className="ds-logout">
+            <button className="ds-nav a" style={{ color: '#6a8aaa', padding: '.5rem .85rem', borderRadius: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '.82rem', fontFamily: 'inherit' }} onClick={handleSignOut}>Sign out</button>
+          </div>
+        </aside>
+
+        <main className="ds-main">
+          {/* Topbar */}
+          <div className="ds-topbar">
+            <div>
+              <p className="ds-eyebrow">Security Command Center</p>
+              <h1 className="ds-title">Dashboard</h1>
+            </div>
+            <div className="ds-topbar-actions">
+              {isAdmin && <button className="btn-ghost btn-sm" onClick={() => setShowAddCam(true)}>+ Add Camera</button>}
+            </div>
+          </div>
+
+          {error && (
+            <div style={{ background: 'rgba(255,80,80,.08)', border: '1px solid rgba(255,80,80,.25)', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.25rem', color: '#ff7676', fontSize: '.88rem' }}>
+              Failed to load data: {error}
+            </div>
+          )}
+
+          {/* TOP ROW: Map + Camera Grid */}
+          <div className="ds-top-row">
+
+            {/* Live Map */}
+            <div className="ds-panel">
+              <div className="ds-panel-header">
+                <div>
+                  <p className="ds-panel-kicker">Live location</p>
+                  <p className="ds-panel-title">Alarm Map</p>
+                </div>
+                <span style={{ fontSize: '.72rem', color: '#8ee8ff', background: 'rgba(0,212,255,.08)', border: '1px solid rgba(0,212,255,.18)', borderRadius: '999px', padding: '.2rem .65rem' }}>
+                  {cameras.length} cameras
+                </span>
+              </div>
+              <div className="map-container">
+                {cameras.length > 0 ? (
+                  <>
+                    <div className="map-grid-h" />
+                    <div className="map-grid-v" />
+                    {cameras.filter(c => c.lat && c.lng).map(cam => (
+                      <div
+                        key={cam.id}
+                        className="map-pin"
+                        style={{
+                          left: `${Math.min(Math.max(((Number(cam.lng) - 15.94) / 0.06) * 100, 8), 92)}%`,
+                          top: `${Math.min(Math.max((1 - ((Number(cam.lat) - 45.80) / 0.03)) * 100, 10), 90)}%`,
+                        }}
+                        title={cam.name}
+                      />
+                    ))}
+                    {cameras.filter(c => !c.lat || !c.lng).length > 0 && (
+                      <div className="map-pin" style={{ left: '50%', top: '50%' }} />
+                    )}
+                    <div className="map-label">
+                      <div>{focusedGeo.label}</div>
+                      <div className="map-coord">{focusedGeo.lat.toFixed(4)}°N {focusedGeo.lng.toFixed(4)}°E</div>
                     </div>
-                    <div className="camera-video-wrapper">
-                      <video id={`video-${cam.id}`} controls muted playsInline className="camera-video" />
+                  </>
+                ) : (
+                  <div className="map-nodata">No camera locations configured</div>
+                )}
+              </div>
+            </div>
+
+            {/* Camera Grid */}
+            <div className="ds-panel">
+              <div className="ds-panel-header">
+                <div>
+                  <p className="ds-panel-kicker">Camera matrix</p>
+                  <p className="ds-panel-title">Live Streams</p>
+                </div>
+                {isAdmin && (
+                  <button className="btn-ghost btn-sm" onClick={() => setShowAddCam(true)}>+ Add</button>
+                )}
+              </div>
+              <div className="cam-grid">
+                {cameras.length === 0 ? (
+                  <div className="cam-nodata">No active streams connected</div>
+                ) : cameras.map(cam => (
+                  <div key={cam.id} className="cam-card">
+                    <div className="cam-card-header">
+                      <span className="cam-name">{cam.name}</span>
+                      <span className={`cam-status-dot ${cam.enabled !== false ? 'dot-live' : 'dot-off'}`} title={cam.enabled !== false ? 'Live' : 'Disabled'} />
                     </div>
-                    {/* Talkdown control */}
-                    <div className="talkdown-row">
+                    <video id={`vid-${cam.id}`} className="cam-video" controls muted playsInline />
+                    <div className="cam-talkdown">
                       <button
-                        type="button"
-                        className={`talkdown-btn${talkdownActive === cam.id ? ' talkdown-active' : ''}`}
+                        className={`talkdown-btn${talkdownActive === cam.id ? ' active' : ''}`}
                         onClick={() => triggerTalkdown(cam.id)}
                         disabled={talkdownActive === cam.id}
                       >
-                        {talkdownActive === cam.id ? 'Warning Active...' : 'Trigger Talkdown'}
+                        {talkdownActive === cam.id ? '▶ Broadcasting...' : 'Talkdown'}
                       </button>
-                      {talkdownActive === cam.id && (
-                        <span className="talkdown-indicator" aria-live="polite">
-                          <span className="talkdown-pulse" aria-hidden="true" /> Broadcasting warning to {cam.name}
-                        </span>
-                      )}
                     </div>
-                  </article>
-                ))
-              ) : (
-                <div className="empty-state">No active streams connected</div>
-              )}
-            </div>
-          </section>
-        </section>
-
-        {/* -- Operator Audit Trail -- */}
-        <section className="dashboard-panel audit-panel" id="audit">
-          <div className="panel-heading">
-            <div><p className="eyebrow">Compliance &amp; traceability</p><h3>Operator Audit Trail</h3></div>
-            <span className="subtle-chip">{auditLog.length} entries</span>
-          </div>
-          <div className="table-wrap">
-            <table className="events-table audit-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Operator</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLog.map((entry) => (
-                  <tr key={entry.id}>
-                    <td><span className="audit-ts">{entry.ts}</span></td>
-                    <td><span className="audit-user">{entry.user}</span></td>
-                    <td>{entry.action}</td>
-                  </tr>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        </section>
-      </main>
-    </div>
+
+          {/* MIDDLE ROW: Metric Cards */}
+          <div className="ds-metrics">
+            <div className="metric-card" style={{ '--mc-glow': 'rgba(0,212,255,.08)' }}>
+              <span className="metric-icon">📷</span>
+              <p className="metric-label">Active Cameras</p>
+              <p className={`metric-value ${activeCams > 0 ? 'cyan' : ''}`}>{cameras.length ? activeCams : '—'}</p>
+              <p className="metric-sub">{cameras.length} total streams</p>
+            </div>
+            <div className="metric-card" style={{ '--mc-glow': 'rgba(0,212,80,.06)' }}>
+              <span className="metric-icon">🟢</span>
+              <p className="metric-label">System Status</p>
+              <p className="metric-value green" style={{ fontSize: '1.4rem', marginTop: '.3rem' }}>OPERATIONAL</p>
+              <p className="metric-sub">Core services online</p>
+            </div>
+            <div className="metric-card" style={{ '--mc-glow': activeAlerts > 0 ? 'rgba(255,100,50,.1)' : 'rgba(87,125,196,.06)' }}>
+              <span className="metric-icon">🚨</span>
+              <p className="metric-label">Active Alerts</p>
+              <p className={`metric-value ${activeAlerts > 5 ? 'red' : activeAlerts > 0 ? 'orange' : 'cyan'}`}>{incidentsLoaded ? activeAlerts : '—'}</p>
+              <p className="metric-sub">{incidentsLoaded ? 'open incidents in queue' : 'loading...'}</p>
+            </div>
+          </div>
+
+          {/* BOTTOM ROW: Alarms Table */}
+          <div className="alarms-panel">
+            <div className="ds-panel-header">
+              <div>
+                <p className="ds-panel-kicker">Activity feed</p>
+                <p className="ds-panel-title">Alarms &amp; Incidents</p>
+              </div>
+              <span style={{ fontSize: '.72rem', color: '#8ab0c9', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.2)', borderRadius: '999px', padding: '.2rem .65rem' }}>
+                Last 24h
+              </span>
+            </div>
+            <div className="table-scroll">
+              <table className="alarms-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Location</th>
+                    <th>Threat Level</th>
+                    <th>Status</th>
+                    <th>Dismissed By</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!incidentsLoaded ? (
+                    <tr><td className="empty" colSpan="6">Loading incidents...</td></tr>
+                  ) : incidents.length === 0 ? (
+                    <tr><td className="empty" colSpan="6">No incidents recorded in the last 24 hours.</td></tr>
+                  ) : incidents.slice(0, 50).map(inc => {
+                    const tl = threatLevel(inc);
+                    const isActive = ['New', 'Acknowledged', 'In Progress'].includes(inc.status);
+                    const camName = cameras.find(c => c.id === inc.camera_id)?.name || inc.source || inc.camera_id || '—';
+                    return (
+                      <tr key={`${inc.event_id}-${inc.detection_id || 0}`}>
+                        <td>
+                          <div className="ts-text">{formatTimestamp(inc.timestamp)}</div>
+                          <div className="ts-ago">{timeAgo(inc.timestamp)}</div>
+                        </td>
+                        <td>{camName}</td>
+                        <td><span className={`threat-badge threat-${tl}`}>{tl}</span></td>
+                        <td><span className={`status-chip ${statusChip(inc.status)}`}>{inc.status || 'New'}</span></td>
+                        <td>
+                          {inc.dismissed_by_name || inc.dismissed_by
+                            ? <span className="dismissed-by">{inc.dismissed_by_name || inc.dismissed_by}</span>
+                            : <span style={{ color: '#4a6a88', fontSize: '.78rem' }}>—</span>
+                          }
+                        </td>
+                        <td>
+                          {isActive ? (
+                            <button
+                              className="dismiss-btn"
+                              onClick={() => dismissAlarm(inc.event_id)}
+                              disabled={updatingId === inc.event_id}
+                            >
+                              {updatingId === inc.event_id ? 'Dismissing...' : 'Dismiss'}
+                            </button>
+                          ) : (
+                            <span style={{ color: '#4a6a88', fontSize: '.78rem' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }

@@ -61,3 +61,17 @@ CREATE INDEX idx_object_attributes_type ON object_attributes(attribute_type);
 CREATE INDEX idx_object_attributes_value ON object_attributes(attribute_value);
 CREATE INDEX idx_object_attributes_detection_id ON object_attributes(detection_id);
 CREATE INDEX idx_attributes_composite ON object_attributes(attribute_type, attribute_value);
+
+-- Operators table (user management system)
+CREATE TABLE IF NOT EXISTS operators (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'operator' CHECK (role IN ('admin', 'operator')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(255)
+);
+
+-- Track which operator dismissed an alarm
+ALTER TABLE events ADD COLUMN IF NOT EXISTS dismissed_by VARCHAR(255);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS dismissed_by_name VARCHAR(100);

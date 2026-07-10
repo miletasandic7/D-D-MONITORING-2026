@@ -2,8 +2,9 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 
-// Dashboard is code-split: HLS.js + all heavy libs only load after login
+// Code-split heavy pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Operators = lazy(() => import('./pages/Operators'));
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/operators" element={<Operators />} />
         </Routes>
       </Suspense>
     </Router>
