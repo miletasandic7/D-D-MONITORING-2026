@@ -163,6 +163,8 @@ const SOP_REASONS = [
   { value: 'Police Notified',   label: 'Police Notified',    desc: 'Law enforcement alerted, incident handed over.' },
 ];
 const ACTIVE_INCIDENT_STATUSES = ['New', 'Acknowledged', 'In Progress'];
+const CRITICAL_BEEP_DURATION_SECONDS = 0.15;
+const CRITICAL_BEEP_INTERVAL_MS = 3000;
 
 function fmtTs(raw) {
   if (!raw) return '—';
@@ -199,6 +201,11 @@ function buildGeo(cam) {
   return { lat: Number(cam?.lat ?? 45.815), lng: Number(cam?.lng ?? 15.98), label: cam?.name || cam?.id || 'Unknown', note: cam?.location || 'Security perimeter' };
 }
 
+function isActiveIncident(inc) {
+  const status = inc.status ?? 'New';
+  return ACTIVE_INCIDENT_STATUSES.includes(status);
+}
+
 function playAlarmBeep(audioCtxRef) {
   try {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
@@ -218,9 +225,9 @@ function playAlarmBeep(audioCtxRef) {
     o.type = 'sine';
     g.gain.setValueAtTime(0.0001, ctx.currentTime);
     g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + CRITICAL_BEEP_DURATION_SECONDS);
     o.start(ctx.currentTime);
-    o.stop(ctx.currentTime + 0.15);
+    o.stop(ctx.currentTime + CRITICAL_BEEP_DURATION_SECONDS);
   } catch {}
 }
 
@@ -400,11 +407,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!incidentsLoaded) return;
-    const hasActiveCritical = incidents.some(i => ACTIVE_INCIDENT_STATUSES.includes(i.status || 'New') && getThreat(i) === 'CRITICAL');
+    const hasActiveCritical = incidents.some(i => isActiveIncident(i) && getThreat(i) === 'CRITICAL');
     if (hasActiveCritical) {
       if (!criticalAlarmIntervalRef.current) {
         playAlarmBeep(alarmAudioCtxRef);
-        criticalAlarmIntervalRef.current = setInterval(() => playAlarmBeep(alarmAudioCtxRef), 3000);
+        criticalAlarmIntervalRef.current = setInterval(() => playAlarmBeep(alarmAudioCtxRef), CRITICAL_BEEP_INTERVAL_MS);
       }
       return;
     }
@@ -463,7 +470,7 @@ export default function Dashboard() {
   if (!authChecked) return null;
 
   const activeCams = cameras.filter(c => c.enabled !== false).length;
-  const activeAlerts = incidents.filter(i => ACTIVE_INCIDENT_STATUSES.includes(i.status)).length;
+  const activeAlerts = incidents.filter(isActiveIncident).length;
 
   return (
     <>
@@ -642,7 +649,7 @@ export default function Dashboard() {
                     <tr><td className="empty" colSpan="7">No incidents recorded in the last 24 hours.</td></tr>
                   ) : incidents.slice(0, 50).map(inc => {
                     const tl = getThreat(inc);
-                    const isActive = ACTIVE_INCIDENT_STATUSES.includes(inc.status);
+                    const isActive = isActiveIncident(inc);
                     const camName = cameras.find(c => c.id === inc.camera_id)?.name || inc.source || inc.camera_id || '—';
                     // Feature 3: flash CRITICAL active rows
                     const rowCls = tl === 'CRITICAL' && isActive ? 'row-critical' : '';
