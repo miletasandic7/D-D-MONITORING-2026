@@ -165,6 +165,7 @@ const SOP_REASONS = [
 const ACTIVE_INCIDENT_STATUSES = ['New', 'Acknowledged', 'In Progress'];
 const CRITICAL_BEEP_DURATION_SECONDS = 0.15;
 const CRITICAL_BEEP_INTERVAL_MS = 3000;
+const CRITICAL_BEEP_INITIAL_GAIN = 0.0001;
 
 function fmtTs(raw) {
   if (!raw) return '—';
@@ -223,7 +224,7 @@ function playAlarmBeep(audioCtxRef) {
     g.connect(ctx.destination);
     o.frequency.value = 880;
     o.type = 'sine';
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.setValueAtTime(CRITICAL_BEEP_INITIAL_GAIN, ctx.currentTime);
     g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.01);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + CRITICAL_BEEP_DURATION_SECONDS);
     o.start(ctx.currentTime);
