@@ -182,7 +182,7 @@ const SOP_REASONS = [
 const ACTIVE_INCIDENT_STATUSES = ['New', 'Acknowledged', 'In Progress'];
 const CRITICAL_BEEP_DURATION_SECONDS = 0.15;
 const CRITICAL_BEEP_INTERVAL_MS = 3000;
-const CRITICAL_BEEP_INITIAL_GAIN = 0.0001;
+const CRITICAL_BEEP_INITIAL_GAIN = 0.0001; // audio ramp start
 const SNOOZE_OPTIONS = [
   { label: '30 minutes', minutes: 30 },
   { label: '2 hours',    minutes: 120 },
