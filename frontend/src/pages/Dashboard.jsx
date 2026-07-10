@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Hls from 'hls.js';
+import * as Dialog from '@radix-ui/react-dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { getSupabaseClient } from '../services/supabaseClient';
 
 const hlsBaseUrl = (import.meta.env.VITE_HLS_BASE_URL || '/hls').replace(/\/$/, '');
@@ -160,6 +162,7 @@ const SOP_REASONS = [
   { value: 'Resolved Remotely', label: 'Resolved Remotely',  desc: 'Handled via remote intervention or talkdown.' },
   { value: 'Police Notified',   label: 'Police Notified',    desc: 'Law enforcement alerted, incident handed over.' },
 ];
+const ACTIVE_INCIDENT_STATUSES = ['New', 'Acknowledged', 'In Progress'];
 
 function fmtTs(raw) {
   if (!raw) return '—';
@@ -196,18 +199,40 @@ function buildGeo(cam) {
   return { lat: Number(cam?.lat ?? 45.815), lng: Number(cam?.lng ?? 15.98), label: cam?.name || cam?.id || 'Unknown', note: cam?.location || 'Security perimeter' };
 }
 
-function playAlarmBeep() {
+function playAlarmBeep(audioCtxRef) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.45, 0.9].forEach(d => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880; o.type = 'sine';
-      g.gain.setValueAtTime(0.35, ctx.currentTime + d);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d + 0.3);
-      o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.35);
-    });
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    let ctx = audioCtxRef.current;
+    if (!ctx || ctx.state === 'closed') {
+      ctx = new AudioCtor();
+      audioCtxRef.current = ctx;
+    }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.value = 880;
+    o.type = 'sine';
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.15);
   } catch {}
+}
+
+function stopAlarmLoop(intervalRef, audioCtxRef) {
+  if (intervalRef.current) {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }
+  if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+    audioCtxRef.current.close().catch(() => {});
+  }
+  audioCtxRef.current = null;
 }
 
 /* ── Feature 1: Video Verification Modal ── */
@@ -222,43 +247,59 @@ function VVModal({ inc, camName, onClose }) {
   const tlColor = { CRITICAL: '#ff3333', HIGH: '#ff6432', MEDIUM: '#ffb400', LOW: '#5bb4ff' }[tl];
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="vv-modal">
-        <div className="vv-header">
-          <div className="vv-header-left">
-            <span className="vv-rec" />
-            <span className="vv-title">Video Verification — Event #{inc.event_id}</span>
-          </div>
-          <button className="vv-close" onClick={onClose} aria-label="Close">✕</button>
-        </div>
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="modal-overlay">
+          <Dialog.Content className="vv-modal">
+            <VisuallyHidden>
+              <Dialog.Title>Video incident verification</Dialog.Title>
+            </VisuallyHidden>
+            <VisuallyHidden>
+              <Dialog.Description>Review replay and metadata for event #{inc.event_id} from {camName || inc.camera_id || 'unknown camera'}.</Dialog.Description>
+            </VisuallyHidden>
+            <div className="vv-header">
+              <div className="vv-header-left">
+                <span className="vv-rec" />
+                <span className="vv-title">Video Verification — Event #{inc.event_id}</span>
+              </div>
+              <Dialog.Close asChild>
+                <button className="vv-close" aria-label="Close">✕</button>
+              </Dialog.Close>
+            </div>
 
-        <div className="vv-video-area">
-          <div className="vv-scanlines" />
-          <div className="vv-placeholder">
-            <div className="vv-cam-icon">📷</div>
-            <div className="vv-replay-text">{secs > 0 ? `Replaying 5-second clip… ${secs}s` : 'Replay complete'}</div>
-            <div className="vv-progress-bar"><div className="vv-progress-fill" /></div>
-            <div className="vv-timer">{fmtTs(inc.timestamp)}</div>
-          </div>
-          <div className="vv-overlay-badge">{tl}</div>
-          <div className="vv-ts-overlay">{new Date().toLocaleTimeString()}</div>
-        </div>
+            <div className="vv-video-area">
+              <div className="vv-scanlines" />
+              <div className="vv-placeholder">
+                <div className="vv-cam-icon">📷</div>
+                <div className="vv-replay-text">{secs > 0 ? `Replaying 5-second clip… ${secs}s` : 'Replay complete'}</div>
+                <div className="vv-progress-bar"><div className="vv-progress-fill" /></div>
+                <div className="vv-timer">{fmtTs(inc.timestamp)}</div>
+              </div>
+              <div className="vv-overlay-badge">{tl}</div>
+              <div className="vv-ts-overlay">{new Date().toLocaleTimeString()}</div>
+            </div>
 
-        <div className="vv-meta">
-          <div className="vv-meta-item"><span>Camera</span><strong>{camName || inc.camera_id || '—'}</strong></div>
-          <div className="vv-meta-item"><span>Threat Level</span><strong style={{ color: tlColor }}>{tl}</strong></div>
-          <div className="vv-meta-item"><span>Status</span><strong>{inc.status || 'New'}</strong></div>
-          <div className="vv-meta-item"><span>Object</span><strong>{inc.object_type || '—'}</strong></div>
-          <div className="vv-meta-item"><span>Zone</span><strong>{inc.zone || inc.location || '—'}</strong></div>
-          <div className="vv-meta-item"><span>Confidence</span><strong>{inc.confidence ? `${Math.round(Number(inc.confidence) * 100)}%` : '—'}</strong></div>
-        </div>
+            <div className="vv-meta">
+              <div className="vv-meta-item"><span>Camera</span><strong>{camName || inc.camera_id || '—'}</strong></div>
+              <div className="vv-meta-item"><span>Threat Level</span><strong style={{ color: tlColor }}>{tl}</strong></div>
+              <div className="vv-meta-item"><span>Status</span><strong>{inc.status || 'New'}</strong></div>
+              <div className="vv-meta-item"><span>Object</span><strong>{inc.object_type || '—'}</strong></div>
+              <div className="vv-meta-item"><span>Zone</span><strong>{inc.zone || inc.location || '—'}</strong></div>
+              <div className="vv-meta-item"><span>Confidence</span><strong>{inc.confidence ? `${Math.round(Number(inc.confidence) * 100)}%` : '—'}</strong></div>
+            </div>
 
-        <div className="vv-footer">
-          <button className="btn-ghost" onClick={onClose}>Close</button>
-          <button className="btn-primary" style={{ fontSize: '.72rem' }} onClick={onClose}>Export Evidence</button>
-        </div>
-      </div>
-    </div>
+            <div className="vv-footer">
+              <Dialog.Close asChild>
+                <button className="btn-ghost">Close</button>
+              </Dialog.Close>
+              <Dialog.Close asChild>
+                <button className="btn-primary" style={{ fontSize: '.72rem' }}>Export Evidence</button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -275,31 +316,43 @@ function SOPModal({ inc, camName, onConfirm, onClose, saving }) {
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sop-modal">
-        <p className="sop-title">Resolve Alarm — SOP</p>
-        <p className="sop-sub">Event #{inc.event_id} · {camName || inc.camera_id || '—'}<br />Select a resolution reason before dismissing.</p>
-        <form onSubmit={submit}>
-          <div className="sop-options">
-            {SOP_REASONS.map(r => (
-              <label key={r.value} className={`sop-option${reason === r.value ? ' sel' : ''}`}>
-                <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => { setReason(r.value); setErr(''); }} />
-                <div><div className="sop-lbl">{r.label}</div><div className="sop-desc">{r.desc}</div></div>
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="modal-overlay">
+          <Dialog.Content className="sop-modal">
+            <VisuallyHidden>
+              <Dialog.Title>SOP dismissal form</Dialog.Title>
+            </VisuallyHidden>
+            <VisuallyHidden>
+              <Dialog.Description>Resolve event #{inc.event_id} for {camName || inc.camera_id || 'unknown camera'} by selecting a protocol reason and optional operator comment.</Dialog.Description>
+            </VisuallyHidden>
+            <p className="sop-title">Resolve Alarm — SOP</p>
+            <p className="sop-sub">Event #{inc.event_id} · {camName || inc.camera_id || '—'}<br />Select a resolution reason before dismissing.</p>
+            <form onSubmit={submit}>
+              <div className="sop-options">
+                {SOP_REASONS.map(r => (
+                  <label key={r.value} className={`sop-option${reason === r.value ? ' sel' : ''}`}>
+                    <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => { setReason(r.value); setErr(''); }} />
+                    <div><div className="sop-lbl">{r.label}</div><div className="sop-desc">{r.desc}</div></div>
+                  </label>
+                ))}
+              </div>
+              <label className="field" style={{ marginBottom: '1rem' }}>
+                <span>Operator Comment (optional)</span>
+                <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add notes — witness details, response actions, etc." />
               </label>
-            ))}
-          </div>
-          <label className="field" style={{ marginBottom: '1rem' }}>
-            <span>Operator Comment (optional)</span>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add notes — witness details, response actions, etc." />
-          </label>
-          {err && <p className="sop-err">{err}</p>}
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Confirm & Dismiss'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {err && <p className="sop-err">{err}</p>}
+              <div className="modal-actions">
+                <Dialog.Close asChild>
+                  <button type="button" className="btn-ghost">Cancel</button>
+                </Dialog.Close>
+                <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Confirm & Dismiss'}</button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Overlay>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -321,7 +374,8 @@ export default function Dashboard() {
   const [vvIncident, setVvIncident] = useState(null);    // Feature 1
   const [sopIncident, setSopIncident] = useState(null);  // Feature 2
   const [sopSaving, setSopSaving] = useState(false);
-  const prevNewRef = useRef(null);
+  const alarmAudioCtxRef = useRef(null);
+  const criticalAlarmIntervalRef = useRef(null);
   const focusedGeo = buildGeo(cameras.find(c => c.enabled !== false) || cameras[0] || null);
   const isAdmin = currentUser?.role === 'admin';
 
@@ -346,10 +400,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!incidentsLoaded) return;
-    const n = incidents.filter(i => i.status === 'New').length;
-    if (prevNewRef.current !== null && n > prevNewRef.current) playAlarmBeep();
-    prevNewRef.current = n;
+    const hasActiveCritical = incidents.some(i => ACTIVE_INCIDENT_STATUSES.includes(i.status || 'New') && getThreat(i) === 'CRITICAL');
+    if (hasActiveCritical) {
+      if (!criticalAlarmIntervalRef.current) {
+        playAlarmBeep(alarmAudioCtxRef);
+        criticalAlarmIntervalRef.current = setInterval(() => playAlarmBeep(alarmAudioCtxRef), 3000);
+      }
+      return;
+    }
+    stopAlarmLoop(criticalAlarmIntervalRef, alarmAudioCtxRef);
   }, [incidents, incidentsLoaded]);
+
+  useEffect(() => () => stopAlarmLoop(criticalAlarmIntervalRef, alarmAudioCtxRef), []);
 
   useEffect(() => {
     if (!authChecked) return;
@@ -401,7 +463,7 @@ export default function Dashboard() {
   if (!authChecked) return null;
 
   const activeCams = cameras.filter(c => c.enabled !== false).length;
-  const activeAlerts = incidents.filter(i => ['New','Acknowledged','In Progress'].includes(i.status)).length;
+  const activeAlerts = incidents.filter(i => ACTIVE_INCIDENT_STATUSES.includes(i.status)).length;
 
   return (
     <>
@@ -580,7 +642,7 @@ export default function Dashboard() {
                     <tr><td className="empty" colSpan="7">No incidents recorded in the last 24 hours.</td></tr>
                   ) : incidents.slice(0, 50).map(inc => {
                     const tl = getThreat(inc);
-                    const isActive = ['New','Acknowledged','In Progress'].includes(inc.status);
+                    const isActive = ACTIVE_INCIDENT_STATUSES.includes(inc.status);
                     const camName = cameras.find(c => c.id === inc.camera_id)?.name || inc.source || inc.camera_id || '—';
                     // Feature 3: flash CRITICAL active rows
                     const rowCls = tl === 'CRITICAL' && isActive ? 'row-critical' : '';
