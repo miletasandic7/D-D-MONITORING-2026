@@ -151,6 +151,26 @@ const DASH_CSS = `
   .notif-x{background:none;border:none;color:#6a8aaa;cursor:pointer;font-size:1rem;margin-left:auto;flex-shrink:0;}
   @media(max-width:1024px){.ds-top-row{grid-template-columns:1fr;}.ds-metrics{grid-template-columns:1fr 1fr;}}
   @media(max-width:700px){.ds-sidebar{display:none;}.ds-main{padding:1.25rem 1rem 3rem;}.ds-metrics{grid-template-columns:1fr;}.cam-grid{grid-template-columns:1fr;}.vv-meta{grid-template-columns:1fr 1fr;}}
+  .snooze-wrap{position:relative;display:inline-flex;align-items:center;}
+  .snooze-btn{background:none;border:none;cursor:pointer;color:#6a8aaa;padding:.28rem .35rem;border-radius:6px;font-size:.82rem;line-height:1;transition:color 150ms,background 150ms;}
+  .snooze-btn:hover{color:#ffa500;background:rgba(255,165,0,.08);}
+  .snooze-btn.snoozed{color:#ffa500;}
+  .snooze-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:rgba(8,14,34,.97);border:1px solid rgba(87,125,196,.28);border-radius:10px;padding:.3rem;min-width:168px;box-shadow:0 8px 28px rgba(0,0,0,.55);}
+  .snooze-menu button{display:block;width:100%;text-align:left;padding:.4rem .72rem;border:none;background:none;color:#c8dff5;font-size:.8rem;font-family:inherit;cursor:pointer;border-radius:7px;transition:background 120ms;}
+  .snooze-menu button:hover{background:rgba(87,125,196,.16);}
+  .snooze-menu .unsnooze-btn{color:#ff9090;}
+  .snooze-chip{display:inline-flex;align-items:center;gap:.28rem;background:rgba(255,165,0,.09);border:1px solid rgba(255,165,0,.28);color:#ffa500;border-radius:999px;padding:.1rem .48rem;font-size:.63rem;white-space:nowrap;}
+  .handoff-modal{max-width:560px;width:100%;background:linear-gradient(160deg,rgba(10,16,36,.98),rgba(4,8,22,.99));border:1px solid rgba(87,140,255,.22);border-radius:20px;padding:2rem 1.75rem;}
+  .handoff-title{font-family:'Orbitron',sans-serif;font-size:.92rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#dff7ff;margin-bottom:1.2rem;}
+  .handoff-report{background:rgba(4,10,28,.9);border:1px solid rgba(87,125,196,.18);border-radius:10px;padding:1rem 1.2rem;font-family:'Courier New',Courier,monospace;font-size:.78rem;line-height:1.75;color:#c8dff5;white-space:pre-wrap;word-break:break-word;max-height:310px;overflow-y:auto;margin-bottom:1rem;}
+  .dispatch-section{padding:.85rem 1.5rem;border-top:1px solid rgba(87,125,196,.1);}
+  .dispatch-kicker{font-size:.63rem;text-transform:uppercase;letter-spacing:.2em;color:#8ee8ff;margin-bottom:.7rem;}
+  .dispatch-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;}
+  .dispatch-btn{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.65rem .45rem;border-radius:10px;border:1px solid rgba(87,125,196,.2);background:rgba(87,125,196,.06);color:#c8dff5;text-decoration:none;font-family:inherit;font-size:.72rem;text-align:center;cursor:pointer;transition:border-color 150ms,background 150ms;}
+  .dispatch-btn:hover,.dispatch-btn:focus{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.07);color:#dff7ff;outline:2px solid rgba(0,212,255,.35);outline-offset:2px;}
+  .dispatch-btn .d-icon{font-size:1.3rem;}
+  .dispatch-btn .d-label{font-weight:600;color:#8ee8ff;font-size:.7rem;line-height:1.3;}
+  .dispatch-btn .d-number{color:#6a8aaa;font-size:.66rem;}
 `;
 
 const SOP_REASONS = [
@@ -194,6 +214,26 @@ function getThreat(inc) {
 function buildHlsUrl(id) { return `${hlsBaseUrl}/${id}/index.m3u8`; }
 function buildGeo(cam) {
   return { lat: Number(cam?.lat ?? 45.815), lng: Number(cam?.lng ?? 15.98), label: cam?.name || cam?.id || 'Unknown', note: cam?.location || 'Security perimeter' };
+}
+
+function getEndOfShift() {
+  const now = new Date();
+  for (const h of [6, 14, 22]) {
+    const t = new Date(now);
+    t.setHours(h, 0, 0, 0);
+    if (t > now) return t.getTime();
+  }
+  const t = new Date(now);
+  t.setDate(t.getDate() + 1);
+  t.setHours(6, 0, 0, 0);
+  return t.getTime();
+}
+
+function fmtSnoozeCountdown(expiresAt) {
+  const rem = Math.max(0, Math.ceil((expiresAt - Date.now()) / 60000));
+  if (rem <= 0) return 'expired';
+  if (rem < 60) return `${rem}m`;
+  return `${Math.floor(rem / 60)}h ${rem % 60 ? `${rem % 60}m` : ''}`.trim();
 }
 
 function playAlarmBeep() {
@@ -253,6 +293,27 @@ function VVModal({ inc, camName, onClose }) {
           <div className="vv-meta-item"><span>Confidence</span><strong>{inc.confidence ? `${Math.round(Number(inc.confidence) * 100)}%` : '—'}</strong></div>
         </div>
 
+        <div className="dispatch-section">
+          <p className="dispatch-kicker">Quick Dispatch Contacts</p>
+          <div className="dispatch-btns">
+            <a href="tel:0601234567" className="dispatch-btn" aria-label="Call Security Guard: 060-123-4567">
+              <span className="d-icon">👮</span>
+              <span className="d-label">Security Guard</span>
+              <span className="d-number">060-123-4567</span>
+            </a>
+            <a href="tel:0609876543" className="dispatch-btn" aria-label="Call Shift Supervisor: 060-987-6543">
+              <span className="d-icon">🧑‍💼</span>
+              <span className="d-label">Shift Supervisor</span>
+              <span className="d-number">060-987-6543</span>
+            </a>
+            <a href="tel:192" className="dispatch-btn" aria-label="Alert Police: 192">
+              <span className="d-icon">🚔</span>
+              <span className="d-label">Alert Police</span>
+              <span className="d-number">192</span>
+            </a>
+          </div>
+        </div>
+
         <div className="vv-footer">
           <button className="btn-ghost" onClick={onClose}>Close</button>
           <button className="btn-primary" style={{ fontSize: '.72rem' }} onClick={onClose}>Export Evidence</button>
@@ -303,6 +364,70 @@ function SOPModal({ inc, camName, onConfirm, onClose, saving }) {
   );
 }
 
+/* ── Feature: Shift Handoff Modal ── */
+function ShiftHandoffModal({ incidents, snoozedCameras, cameras, onClose }) {
+  const resolved = incidents.filter(i => i.status === 'Resolved').length;
+  const open = incidents.filter(i => ['New', 'Acknowledged', 'In Progress'].includes(i.status));
+  const snoozedNames = Object.entries(snoozedCameras)
+    .filter(([, exp]) => exp > Date.now())
+    .map(([id]) => cameras.find(c => c.id === id)?.name || id);
+
+  const now = new Date().toLocaleString('en-GB');
+  const openLines = open.length === 0
+    ? ['  (none)']
+    : open.slice(0, 15).map(i => {
+        const cam = cameras.find(c => c.id === i.camera_id)?.name || i.camera_id || '—';
+        return `  • [${getThreat(i)}] ${cam} — ${fmtTs(i.timestamp)} (${i.status})`;
+      });
+
+  const report = [
+    '# Shift Handoff Report (Zapisnik)',
+    `Generated: ${now}`,
+    '',
+    '## Summary',
+    `  Alarms Resolved (session data): ${resolved}`,
+    `  Open / Active Alerts:           ${open.length}`,
+    `  Snoozed Cameras:                ${snoozedNames.length > 0 ? snoozedNames.join(', ') : 'None'}`,
+    '',
+    '## Open Alerts',
+    ...openLines,
+    '',
+    '---',
+    `Operator: (sign here)`,
+    `Handoff time: ${now}`,
+  ].join('\n');
+
+  const [copied, setCopied] = useState(false);
+  const [copyErr, setCopyErr] = useState('');
+
+  const copyReport = async () => {
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setCopyErr('');
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopyErr('Clipboard unavailable — please select and copy the text manually.');
+    }
+  };
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="handoff-title" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="handoff-modal">
+        <p className="handoff-title" id="handoff-title">📋 Shift Handoff — Zapisnik</p>
+        <pre className="handoff-report">{report}</pre>
+        {copyErr && <p style={{ color: '#ff7676', fontSize: '.8rem', marginBottom: '.75rem' }}>{copyErr}</p>}
+        <div className="modal-actions">
+          <button className="btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn-primary" style={{ fontSize: '.72rem' }} onClick={copyReport}>
+            {copied ? '✓ Copied!' : 'Copy Report to Clipboard'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Dashboard ── */
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -321,6 +446,9 @@ export default function Dashboard() {
   const [vvIncident, setVvIncident] = useState(null);    // Feature 1
   const [sopIncident, setSopIncident] = useState(null);  // Feature 2
   const [sopSaving, setSopSaving] = useState(false);
+  const [snoozedCameras, setSnoozedCameras] = useState({}); // { camId: expiresAtMs }
+  const [snoozeOpenFor, setSnoozeOpenFor] = useState(null);  // camId with open dropdown
+  const [showHandoff, setShowHandoff] = useState(false);
   const prevNewRef = useRef(null);
   const focusedGeo = buildGeo(cameras.find(c => c.enabled !== false) || cameras[0] || null);
   const isAdmin = currentUser?.role === 'admin';
@@ -346,10 +474,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!incidentsLoaded) return;
-    const n = incidents.filter(i => i.status === 'New').length;
+    const n = incidents.filter(i => {
+      if (i.status !== 'New') return false;
+      const exp = snoozedCameras[i.camera_id];
+      return !exp || exp <= Date.now();
+    }).length;
     if (prevNewRef.current !== null && n > prevNewRef.current) playAlarmBeep();
     prevNewRef.current = n;
-  }, [incidents, incidentsLoaded]);
+  }, [incidents, incidentsLoaded, snoozedCameras]);
 
   useEffect(() => {
     if (!authChecked) return;
@@ -360,6 +492,29 @@ export default function Dashboard() {
       else if (v.canPlayType('application/vnd.apple.mpegurl')) v.src = buildHlsUrl(cam.id);
     });
   }, [cameras, authChecked]);
+
+  // Close snooze dropdown when clicking outside
+  useEffect(() => {
+    if (!snoozeOpenFor) return;
+    const handler = () => setSnoozeOpenFor(null);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [snoozeOpenFor]);
+
+  const isCamSnoozed = (camId) => {
+    const exp = snoozedCameras[camId];
+    return !!exp && exp > Date.now();
+  };
+
+  const snoozeCamera = (camId, durationMs) => {
+    setSnoozedCameras(prev => ({ ...prev, [camId]: Date.now() + durationMs }));
+    setSnoozeOpenFor(null);
+  };
+
+  const unsnoozeCamera = (camId) => {
+    setSnoozedCameras(prev => { const n = { ...prev }; delete n[camId]; return n; });
+    setSnoozeOpenFor(null);
+  };
 
   const handleSignOut = async () => {
     const s = await getSupabaseClient();
@@ -439,6 +594,16 @@ export default function Dashboard() {
           />
         )}
 
+        {/* Shift Handoff Modal */}
+        {showHandoff && (
+          <ShiftHandoffModal
+            incidents={incidents}
+            snoozedCameras={snoozedCameras}
+            cameras={cameras}
+            onClose={() => setShowHandoff(false)}
+          />
+        )}
+
         {showAddCam && (
           <div className="modal-overlay" role="dialog" aria-modal="true">
             <div className="modal-card">
@@ -483,6 +648,7 @@ export default function Dashboard() {
               <h1 className="ds-title">Dashboard</h1>
             </div>
             <div className="ds-topbar-actions">
+              <button className="btn-ghost btn-sm" onClick={() => setShowHandoff(true)}>📋 Shift Handoff</button>
               {isAdmin && <button className="btn-ghost btn-sm" onClick={() => setShowAddCam(true)}>+ Add Camera</button>}
             </div>
           </div>
@@ -524,8 +690,33 @@ export default function Dashboard() {
                     <div key={cam.id} className="cam-card">
                       <div className="cam-card-header">
                         <span className="cam-name">{cam.name}</span>
-                        <span className={`cam-status-dot ${cam.enabled !== false ? 'dot-live' : 'dot-off'}`} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.35rem' }}>
+                          <div className="snooze-wrap" onMouseDown={e => e.stopPropagation()}>
+                            <button
+                              className={`snooze-btn${isCamSnoozed(cam.id) ? ' snoozed' : ''}`}
+                              onClick={e => { e.stopPropagation(); setSnoozeOpenFor(snoozeOpenFor === cam.id ? null : cam.id); }}
+                              title={isCamSnoozed(cam.id) ? `Snoozed · ${fmtSnoozeCountdown(snoozedCameras[cam.id])} remaining — click to change` : 'Snooze alerts for this camera'}
+                              aria-label="Snooze camera alerts"
+                            >🔕</button>
+                            {snoozeOpenFor === cam.id && (
+                              <div className="snooze-menu" role="menu">
+                                <button role="menuitem" onClick={() => snoozeCamera(cam.id, 30 * 60 * 1000)}>30 minutes</button>
+                                <button role="menuitem" onClick={() => snoozeCamera(cam.id, 2 * 60 * 60 * 1000)}>2 hours</button>
+                                <button role="menuitem" onClick={() => snoozeCamera(cam.id, getEndOfShift() - Date.now())}>Until end of shift</button>
+                                {isCamSnoozed(cam.id) && (
+                                  <button role="menuitem" className="unsnooze-btn" onClick={() => unsnoozeCamera(cam.id)}>Unsnooze</button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <span className={`cam-status-dot ${cam.enabled !== false ? 'dot-live' : 'dot-off'}`} />
+                        </div>
                       </div>
+                      {isCamSnoozed(cam.id) && (
+                        <div style={{ padding: '.18rem .75rem', background: 'rgba(255,165,0,.06)', borderBottom: '1px solid rgba(255,165,0,.1)' }}>
+                          <span className="snooze-chip">🔕 Snoozed · {fmtSnoozeCountdown(snoozedCameras[cam.id])}</span>
+                        </div>
+                      )}
                       <video id={`vid-${cam.id}`} className="cam-video" controls muted playsInline />
                       <div className="cam-talkdown">
                         <button className={`talkdown-btn${talkdownActive === cam.id ? ' t-active' : ''}`} onClick={() => { setTalkdownActive(cam.id); setTimeout(() => setTalkdownActive(null), 5000); }} disabled={talkdownActive === cam.id}>
@@ -582,8 +773,8 @@ export default function Dashboard() {
                     const tl = getThreat(inc);
                     const isActive = ['New','Acknowledged','In Progress'].includes(inc.status);
                     const camName = cameras.find(c => c.id === inc.camera_id)?.name || inc.source || inc.camera_id || '—';
-                    // Feature 3: flash CRITICAL active rows
-                    const rowCls = tl === 'CRITICAL' && isActive ? 'row-critical' : '';
+                    // flash CRITICAL active rows — skip if camera is snoozed
+                    const rowCls = tl === 'CRITICAL' && isActive && !isCamSnoozed(inc.camera_id) ? 'row-critical' : '';
                     return (
                       <tr
                         key={`${inc.event_id}-${inc.detection_id || 0}`}
@@ -595,7 +786,7 @@ export default function Dashboard() {
                           <div className="ts-text">{fmtTs(inc.timestamp)}</div>
                           <div className="ts-ago">{timeAgo(inc.timestamp)}</div>
                         </td>
-                        <td>{camName}</td>
+                        <td>{camName}{isCamSnoozed(inc.camera_id) && <span className="snooze-chip" style={{marginLeft:'.4rem'}}>🔕</span>}</td>
                         <td><span className={`threat-badge threat-${tl}`}>{tl}</span></td>
                         <td><span className={`status-chip ${isActive ? 's-active' : 's-resolved'}`}>{inc.status || 'New'}</span></td>
                         <td>
