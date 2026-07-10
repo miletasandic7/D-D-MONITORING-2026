@@ -257,12 +257,11 @@ export default function Login() {
 
             {step !== 'complete' ? (
               <>
-                <div className="pr-cards" role="list">
+                <div className="pr-cards" >
                   {PLANS.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      role="listitem"
                       className={`pr-card${planId === p.id ? ' pr-card-sel' : ''}${p.recommended ? ' pr-card-rec' : ''}`}
                       onClick={() => { setPlanId(p.id); setStep('contacts'); setPpStatus(''); setPpError(''); }}
                     >
