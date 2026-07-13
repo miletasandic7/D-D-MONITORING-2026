@@ -1,3 +1,8 @@
+// NOTE: this file is a leftover from an early local-prototype phase.
+// Production (and this app's real API in /api and /db/index.js) uses
+// PostgreSQL (Neon) via DATABASE_URL, NOT SQLite. This module is not
+// imported by any live API route. Kept only for db/migrate.js / manual
+// local experiments; safe to delete once confirmed unused in your workflow.
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 

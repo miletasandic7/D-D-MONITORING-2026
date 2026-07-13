@@ -1,0 +1,38 @@
+version: "3.8"
+
+# Standalone RTSP -> HLS media server for the D&D Monitoring dashboard.
+#
+# Vercel serverless functions cannot host this (they are stateless, and
+# cannot keep a persistent connection to your cameras). Run this on any
+# always-on host instead: a small VPS, Fly.io, Railway, an on-prem NVR
+# machine, or a Raspberry Pi on the same network as your cameras.
+#
+# Usage:
+#   1. Edit mediamtx.yml and add one entry under `paths:` per camera,
+#      each pointing at that camera's real RTSP url (source: rtsp://...).
+#   2. docker compose up -d
+#   3. Confirm it works:  curl http://<host>:8888/<cameraId>/index.m3u8
+#   4. Point the frontend's VITE_HLS_BASE_URL at:
+#        https://<your-public-domain>:8888
+#      (put it behind HTTPS via a reverse proxy / Caddy / nginx — browsers
+#      will refuse to load http:// media from an https:// dashboard).
+#   5. Add that domain to vercel.json's CSP (media-src / connect-src).
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: dnd-mediamtx
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    # network_mode: host is the simplest way to expose RTSP (8554),
+    # HLS (8888) and WebRTC (8889 + ICE ports) without mapping each one
+    # individually. If you can't use host networking (e.g. some managed
+    # platforms), replace it with an explicit `ports:` list instead:
+    #
+    # ports:
+    #   - "8554:8554"       # RTSP
+    #   - "8888:8888"       # HLS
+    #   - "8889:8889"       # WebRTC (HTTP)
+    #   - "8189:8189/udp"   # WebRTC ICE

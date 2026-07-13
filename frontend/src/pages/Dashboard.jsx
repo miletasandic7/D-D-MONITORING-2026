@@ -150,6 +150,8 @@ export default function Dashboard() {
   const [incidents, setIncidents] = useState([]);
   const [incidentsLoaded, setIncidentsLoaded] = useState(false);
   const [cameras, setCameras] = useState(null);
+  const [camerasError, setCamerasError] = useState(null);
+  const [streamErrors, setStreamErrors] = useState({});
   const [updatingIncidentId, setUpdatingIncidentId] = useState(null);
   const [error, setError] = useState(null);
 
@@ -558,27 +560,69 @@ export default function Dashboard() {
 
     api
       .get('/cameras')
-      .then((res) => setCameras(res.data.cameras || []))
-      .catch(() => setCameras([]));
+      .then((res) => {
+        setCameras(res.data.cameras || []);
+        setCamerasError(null);
+      })
+      .catch((err) => {
+        const backendMessage = err.response?.data?.error;
+        setCamerasError(
+          backendMessage ||
+          (err.response
+            ? `Camera service returned an error (HTTP ${err.response.status}).`
+            : 'Could not reach the camera API. Check your network connection or API deployment.')
+        );
+        setCameras([]);
+      });
   }, [authChecked]);
 
   // Initialize HLS for each camera video element
   useEffect(() => {
-    if (!authChecked || !cameras) return;
+    if (!authChecked || !cameras) return undefined;
+
+    const hlsInstances = [];
+    setStreamErrors({});
 
     cameras.forEach((cam) => {
+      if (cam.enabled === false) return;
       const video = document.getElementById(`video-${cam.id}`);
-      if (video) {
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(buildHlsManifestUrl(cam.id));
-          hls.attachMedia(video);
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = buildHlsManifestUrl(cam.id);
-        }
+      if (!video) return;
+
+      const manifestUrl = buildHlsManifestUrl(cam.id);
+
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+          setStreamErrors((prev) => ({
+            ...prev,
+            [cam.id]: 'Stream unavailable. Check that the media server is running and reachable.',
+          }));
+        });
+        hls.loadSource(manifestUrl);
+        hls.attachMedia(video);
+        hlsInstances.push(hls);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (e.g. Safari)
+        video.src = manifestUrl;
+        video.addEventListener('error', () => {
+          setStreamErrors((prev) => ({
+            ...prev,
+            [cam.id]: 'Stream unavailable. Check that the media server is running and reachable.',
+          }));
+        });
+      } else {
+        setStreamErrors((prev) => ({
+          ...prev,
+          [cam.id]: 'This browser does not support HLS playback.',
+        }));
       }
     });
-  }, [cameras]);
+
+    return () => {
+      hlsInstances.forEach((hls) => hls.destroy());
+    };
+  }, [cameras, authChecked]);
 
   // Evidence export: build a metadata JSON + simulated MP4 download
   const exportEvidence = (event) => {
@@ -1323,6 +1367,12 @@ export default function Dashboard() {
               </button>
             </div>
 
+            {camerasError && (
+              <p className="checkout-status checkout-status-error" role="alert">
+                Camera list failed to load: {camerasError}
+              </p>
+            )}
+
             {showAddCam && (
               <form className="add-cam-form" onSubmit={submitAddCamera}>
                 <label className="search-field">
@@ -1399,6 +1449,11 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div className="camera-video-wrapper">
+                      {streamErrors[cam.id] && (
+                        <p className="checkout-status checkout-status-error" role="alert">
+                          {streamErrors[cam.id]}
+                        </p>
+                      )}
                       <video id={`video-${cam.id}`} controls muted playsInline className="camera-video" />
                     </div>
                     {/* Talkdown control */}
