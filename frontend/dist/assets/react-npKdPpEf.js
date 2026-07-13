@@ -57,6 +57,3 @@ Error generating stack: `+u.message+`
  *
  * @license MIT
  */const Gp="6";try{window.__reactRouterVersion=Gp}catch{}const Zp="startTransition",is=Zc[Zp];function eh(e){let{basename:t,children:n,future:r,window:l}=e,u=N.useRef();u.current==null&&(u.current=np({window:l,v5Compat:!0}));let i=u.current,[o,s]=N.useState({action:i.action,location:i.location}),{v7_startTransition:a}=r||{},h=N.useCallback(p=>{a&&is?is(()=>s(p)):s(p)},[s,a]);return N.useLayoutEffect(()=>i.listen(h),[i,h]),N.useEffect(()=>Kp(r),[r]),N.createElement(Xp,{basename:t,children:n,location:o.location,navigationType:o.action,navigator:i,future:r})}var os;(function(e){e.UseScrollRestoration="useScrollRestoration",e.UseSubmit="useSubmit",e.UseSubmitFetcher="useSubmitFetcher",e.UseFetcher="useFetcher",e.useViewTransitionState="useViewTransitionState"})(os||(os={}));var ss;(function(e){e.UseFetcher="useFetcher",e.UseFetchers="useFetchers",e.UseScrollRestoration="useScrollRestoration"})(ss||(ss={}));export{eh as B,bp as R,Jp as a,Yp as b,N as r,qp as u};
-
-
-export { b }

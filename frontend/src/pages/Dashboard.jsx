@@ -149,7 +149,7 @@ export default function Dashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [incidentsLoaded, setIncidentsLoaded] = useState(false);
-  const [cameras, setCameras] = useState([]);
+  const [cameras, setCameras] = useState(null);
   const [updatingIncidentId, setUpdatingIncidentId] = useState(null);
   const [error, setError] = useState(null);
 
@@ -203,7 +203,7 @@ export default function Dashboard() {
     setWizardSaving(true);
     try {
       await api.post('/cameras', newCamera);
-      setCameras((prev) => [...prev, newCamera]);
+      setCameras((prev) => [...(prev || []), newCamera]);
     } catch (err) {
       setWizardDone(false);
       alert(err?.response?.data?.error || err.message || 'Failed to save camera.');
@@ -263,7 +263,7 @@ export default function Dashboard() {
     }
     setAddCamSaving(true);
     setAddCamError('');
-    const id = `CAM-${String(cameras.length + 1).padStart(2, '0')}`;
+    const id = `CAM-${String((cameras?.length || 0) + 1).padStart(2, '0')}`;
     const newCam = {
       id,
       name: addCamForm.name.trim(),
@@ -278,7 +278,7 @@ export default function Dashboard() {
     };
     try {
       await api.post('/cameras', newCam);
-      setCameras((prev) => [...prev, newCam]);
+      setCameras((prev) => [...(prev || []), newCam]);
       setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
       setShowAddCam(false);
       addAuditEntry(`Added camera: ${newCam.name} (${id})`);
@@ -503,7 +503,7 @@ export default function Dashboard() {
       return true;
     });
 
-  const activeCameras = cameras.filter((camera) => camera.enabled !== false).length;
+  const activeCameras = cameras ? cameras.filter((camera) => camera.enabled !== false).length : 0;
   const recentAlerts = filteredIncidents.filter((incident) => ['New', 'Acknowledged', 'In Progress'].includes(incident.status)).length;
 
   const recentEvents = filteredIncidents.slice(0, 20).map((item) => ({
@@ -522,7 +522,7 @@ export default function Dashboard() {
   }));
 
   const selectedAlarmEvent = recentEvents.find((event) => event.eventId === selectedAlarmId) || recentEvents[0] || null;
-  const selectedAlarmCamera = cameras.find((camera) => camera.id === selectedAlarmEvent?.camera_id) || cameras[0] || null;
+  const selectedAlarmCamera = cameras?.find((camera) => camera.id === selectedAlarmEvent?.camera_id) || cameras?.[0] || null;
   const selectedAlarmGeo = buildCameraGeo(selectedAlarmCamera);
   const generatedReport = buildIncidentReport(selectedAlarmEvent, selectedAlarmCamera, { district: emergencyDistrict, ...emergencyContacts }, selectedPlan);
   const reportSummary = selectedAlarmEvent
@@ -558,13 +558,13 @@ export default function Dashboard() {
 
     api
       .get('/cameras')
-      .then((res) => setCameras(res.data.cameras))
+      .then((res) => setCameras(res.data.cameras || []))
       .catch(() => setCameras([]));
   }, [authChecked]);
 
   // Initialize HLS for each camera video element
   useEffect(() => {
-    if (!authChecked) return;
+    if (!authChecked || !cameras) return;
 
     cameras.forEach((cam) => {
       const video = document.getElementById(`video-${cam.id}`);
@@ -767,11 +767,17 @@ export default function Dashboard() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
-          <a className="sidebar-nav-item active" href="#overview">Overview</a>
+          <a className="sidebar-nav-item active" href="#overview">Dashboard</a>
           <a className="sidebar-nav-item" href="#cameras">Cameras</a>
+          <a className="sidebar-nav-item" href="#streams">Live Streams</a>
+          <a className="sidebar-nav-item" href="#alerts">Alerts</a>
           <a className="sidebar-nav-item" href="#events">Incidents</a>
-          <a className="sidebar-nav-item" href="#audit">Audit Trail</a>
-          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>D&amp;D Subscription</button>
+          <a className="sidebar-nav-item" href="#map">Map</a>
+          <a className="sidebar-nav-item" href="#detection">AI Detection</a>
+          <a className="sidebar-nav-item" href="#reports">Reports</a>
+          <a className="sidebar-nav-item" href="#users">Users</a>
+          <a className="sidebar-nav-item" href="#settings">Settings</a>
+          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
@@ -787,8 +793,38 @@ export default function Dashboard() {
             <h2 id="overview">Dashboard</h2>
           </div>
           <div className="topbar-actions">
-            <button className="ghost-button" type="button" onClick={() => { setShowAddCam(true); setTimeout(() => document.getElementById('cameras')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>+ Add Camera</button>
-            <button className="primary-button" type="button">New Alert</button>
+            <div className="search-bar">
+              <input type="text" placeholder="Global search..." className="search-input" />
+              <button className="search-button" aria-label="Search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              </button>
+            </div>
+            <button className="icon-button" aria-label="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </button>
+            <button className="icon-button" aria-label="Settings" onClick={() => setShowBilling(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <div className="user-profile">
+              <div className="user-avatar">
+                {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            </div>
+            <button className="primary-button" onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}>
+              + Add Camera
+            </button>
+            <button className="ghost-button" onClick={() => setWizardOpen(true)}>
+              + Create Incident
+            </button>
           </div>
         </header>
 
@@ -1019,18 +1055,63 @@ export default function Dashboard() {
         <section className="metrics-grid" aria-label="Key metrics">
           <article className="metric-card">
             <p className="metric-label">Active Cameras</p>
-            <strong>{cameras.length ? activeCameras : '-'}</strong>
-            <span>{cameras.length ? `${cameras.length} total streams` : 'Loading camera inventory'}</span>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? `${cameras.length} total cameras` : 'No cameras configured'}</span>
           </article>
           <article className="metric-card">
-            <p className="metric-label">System Status</p>
+            <p className="metric-label">Offline Cameras</p>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? cameras.length - activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? 'Disabled streams' : 'No cameras configured'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Active Streams</p>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? 'Live HLS connections' : 'No cameras configured'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Open Alerts</p>
+            {!incidentsLoaded ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{recentAlerts}</strong>
+            )}
+            <span>{!incidentsLoaded ? <div className="skeleton skeleton-text short" /> : 'New & acknowledged'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Incidents Today</p>
+            {!incidentsLoaded ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{incidents.length}</strong>
+            )}
+            <span>{!incidentsLoaded ? <div className="skeleton skeleton-text short" /> : 'Total detections'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">System Health</p>
             <strong className="metric-accent">{systemStatus.label}</strong>
-            <span>Core services online</span>
+            <span>Core services operational</span>
           </article>
           <article className="metric-card">
-            <p className="metric-label">Recent Alerts</p>
-            <strong>{incidentsLoaded ? recentAlerts : '-'}</strong>
-            <span>Open incidents in queue</span>
+            <p className="metric-label">Storage Usage</p>
+            <strong>-</strong>
+            <span>Storage monitoring not configured</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">API Status</p>
+            <strong className="metric-accent">Online</strong>
+            <span>Backend connected</span>
           </article>
         </section>
 
@@ -1049,18 +1130,31 @@ export default function Dashboard() {
                 <span className="status-pill warning">Active alarm</span>
                 <span className="subtle-chip">{selectedAlarmEvent ? `Event #${selectedAlarmEvent.eventId}` : 'No active event'}</span>
               </div>
-              <div className="alarm-map">
-                <div className="map-grid-line map-grid-x" />
-                <div className="map-grid-line map-grid-y" />
-                <div
-                  className="map-pin"
-                  style={{ left: `${Math.min(Math.max(((selectedAlarmGeo.lng - 15.94) / 0.06) * 100, 8), 92)}%`, top: `${Math.min(Math.max((1 - ((selectedAlarmGeo.lat - 45.80) / 0.03)) * 100, 10), 90)}%` }}
-                />
-                <div className="map-callout">
-                  <strong>{selectedAlarmGeo.label}</strong>
-                  <p>{selectedAlarmGeo.note}</p>
+              {selectedAlarmCamera && (selectedAlarmGeo.lat !== 0 || selectedAlarmGeo.lng !== 0) ? (
+                <div className="alarm-map">
+                  <div className="map-grid-line map-grid-x" />
+                  <div className="map-grid-line map-grid-y" />
+                  <div
+                    className="map-pin"
+                    style={{ left: `${Math.min(Math.max(((selectedAlarmGeo.lng - 15.94) / 0.06) * 100, 8), 92)}%`, top: `${Math.min(Math.max((1 - ((selectedAlarmGeo.lat - 45.80) / 0.03)) * 100, 10), 90)}%` }}
+                  />
+                  <div className="map-callout">
+                    <strong>{selectedAlarmGeo.label}</strong>
+                    <p>{selectedAlarmGeo.note}</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="alarm-map alarm-map-empty">
+                  <div className="empty-state-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#8ea3b8', marginBottom: '1rem' }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>No camera locations configured</p>
+                    <p style={{ color: '#6a7a8a', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>Add cameras with latitude/longitude coordinates to enable map view</p>
+                  </div>
+                </div>
+              )}
               <div className="alarm-location-list">
                 <div>
                   <span className="alarm-label">Exact location</span>
@@ -1292,7 +1386,7 @@ export default function Dashboard() {
             )}
 
             <div className="camera-list">
-              {cameras.length ? (
+              {cameras && cameras.length > 0 ? (
                 cameras.map((cam) => (
                   <article className="camera-card" key={cam.id}>
                     <div className="camera-card-header">
@@ -1326,7 +1420,23 @@ export default function Dashboard() {
                   </article>
                 ))
               ) : (
-                <div className="empty-state">No active streams connected</div>
+                <div className="empty-state">
+                  <div className="empty-state-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#8ea3b8', marginBottom: '1rem' }}>
+                      <path d="M23 7l-7 5 7 5V7z" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg>
+                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>No active streams connected</p>
+                    <button 
+                      className="ghost-button" 
+                      type="button"
+                      onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}
+                      style={{ marginTop: '1rem' }}
+                    >
+                      Add Camera
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </section>
