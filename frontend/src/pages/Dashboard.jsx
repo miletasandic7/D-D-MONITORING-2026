@@ -485,7 +485,7 @@ export default function Dashboard() {
   };
 
   // Client-side filter + false-alarm suppression applied to incidents list
-  const filteredIncidents = incidents
+  const filteredIncidents = (incidents || [])
     .filter((item) => {
       if (suppressEnabled && Number(item.confidence) < suppressThreshold / 100) return false;
       if (filterCamera && String(item.camera_id || '').toLowerCase() !== filterCamera.toLowerCase()) return false;
@@ -682,7 +682,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-shell">
       {/* -- Push Notification Banner -- */}
-      {notifications.length > 0 && (
+      {notifications && notifications.length > 0 && (
         <div className="notif-stack" role="alert" aria-live="assertive">
           {notifications.map((n) => (
             <div key={n.id} className={`notif-banner notif-${n.level}`}>
@@ -1003,7 +1003,7 @@ export default function Dashboard() {
               <span>Camera</span>
               <select value={filterCamera} onChange={(e) => setFilterCamera(e.target.value)}>
                 <option value="">All cameras</option>
-                {cameras.map((cam) => (
+                {cameras && cameras.map((cam) => (
                   <option key={cam.id} value={cam.id}>{cam.name}</option>
                 ))}
               </select>
@@ -1458,7 +1458,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {auditLog.map((entry) => (
+                {(auditLog || []).map((entry) => (
                   <tr key={entry.id}>
                     <td><span className="audit-ts">{entry.ts}</span></td>
                     <td><span className="audit-user">{entry.user}</span></td>
