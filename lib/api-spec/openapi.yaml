@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: cameras
+    description: Camera management
+  - name: incidents
+    description: Incident / detection review
+  - name: search
+    description: Smart search
+  - name: paypal
+    description: PayPal subscription checkout
 paths:
   /healthz:
     get:
@@ -24,6 +32,182 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /cameras/scan:
+    get:
+      operationId: scanCameras
+      tags: [cameras]
+      summary: Attempt an ONVIF auto-discovery scan for a camera RTSP URL
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraScanResult"
+  /cameras:
+    get:
+      operationId: listCameras
+      tags: [cameras]
+      summary: List cameras
+      responses:
+        "200":
+          description: Cameras
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CameraListResponse"
+    post:
+      operationId: upsertCamera
+      tags: [cameras]
+      summary: Create or update a camera
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CameraInput"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleResponse"
+    delete:
+      operationId: deleteCamera
+      tags: [cameras]
+      summary: Delete a camera
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleResponse"
+  /incidents:
+    get:
+      operationId: listIncidents
+      tags: [incidents]
+      summary: List incidents / AI detections
+      responses:
+        "200":
+          description: Incidents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentListResponse"
+  /incidents/{eventId}/status:
+    patch:
+      operationId: updateIncidentStatus
+      tags: [incidents]
+      summary: Update incident status
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentStatusInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentStatusResult"
+  /search/attributes:
+    get:
+      operationId: searchAttributes
+      tags: [search]
+      summary: Smart search by AI detection attributes
+      parameters:
+        - name: object_type
+          in: query
+          schema:
+            type: string
+        - name: color
+          in: query
+          schema:
+            type: string
+        - name: equipment
+          in: query
+          schema:
+            type: string
+        - name: camera_id
+          in: query
+          schema:
+            type: string
+        - name: min_confidence
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+        - name: end_date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentListResponse"
+  /paypal/orders:
+    post:
+      operationId: createPaypalOrder
+      tags: [paypal]
+      summary: Create a PayPal order for a subscription plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaypalOrderInput"
+      responses:
+        "200":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaypalOrderResult"
+  /paypal/orders/{orderId}/capture:
+    post:
+      operationId: capturePaypalOrder
+      tags: [paypal]
+      summary: Capture an approved PayPal order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaypalCaptureInput"
+      responses:
+        "200":
+          description: Order captured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaypalCaptureResult"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +217,145 @@ components:
           type: string
       required:
         - status
-
+    Camera:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        rtsp_url: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        lat: { type: ["number", "null"] }
+        lng: { type: ["number", "null"] }
+        enabled: { type: boolean }
+        resolution: { type: ["string", "null"] }
+        fps: { type: ["integer", "null"] }
+        codec: { type: ["string", "null"] }
+    CameraInput:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        rtsp_url: { type: string }
+        location: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        enabled: { type: boolean, default: true }
+        resolution: { type: string }
+        fps: { type: integer }
+        codec: { type: string }
+    CameraListResponse:
+      type: object
+      required: [success, count, cameras]
+      properties:
+        success: { type: boolean }
+        count: { type: integer }
+        cameras:
+          type: array
+          items:
+            $ref: "#/components/schemas/Camera"
+    CameraScanResult:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+        rtsp_url: { type: ["string", "null"] }
+    SimpleResponse:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        error: { type: string }
+    DetectionAttribute:
+      type: object
+      properties:
+        attribute_type: { type: string }
+        attribute_value: { type: string }
+        confidence: { type: number }
+    Incident:
+      type: object
+      required: [id, event_id, object_type, confidence, status, timestamp]
+      properties:
+        id: { type: integer }
+        event_id: { type: integer }
+        object_type: { type: string }
+        confidence: { type: number }
+        status: { type: string }
+        timestamp: { type: string }
+        camera_id: { type: ["string", "null"] }
+        severity: { type: ["string", "null"] }
+        source_description: { type: ["string", "null"] }
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetectionAttribute"
+    IncidentListResponse:
+      type: object
+      required: [success, count]
+      properties:
+        success: { type: boolean }
+        count: { type: integer }
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        incidents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        statuses:
+          type: array
+          items:
+            type: string
+    IncidentStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [New, Acknowledged, "In Progress", Resolved, "False Alarm"]
+    IncidentStatusResult:
+      type: object
+      required: [success, event_id, status]
+      properties:
+        success: { type: boolean }
+        event_id: { type: integer }
+        status: { type: string }
+    PaypalOrderInput:
+      type: object
+      required: [planId]
+      properties:
+        planId: { type: string }
+        planName: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        district: { type: string }
+        contacts:
+          type: object
+          additionalProperties: true
+    PaypalOrderResult:
+      type: object
+      required: [success, id, status]
+      properties:
+        success: { type: boolean }
+        id: { type: string }
+        status: { type: string }
+        order:
+          type: object
+          additionalProperties: true
+    PaypalCaptureInput:
+      type: object
+      properties:
+        planId: { type: string }
+        orderId: { type: string }
+    PaypalCaptureResult:
+      type: object
+      required: [success, status]
+      properties:
+        success: { type: boolean }
+        status: { type: string }
+        capture:
+          type: object
+          additionalProperties: true

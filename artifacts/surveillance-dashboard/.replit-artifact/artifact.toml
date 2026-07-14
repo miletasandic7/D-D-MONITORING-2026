@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "D&D Global AI Surveillance"
+version = "1.0.0"
+id = "artifacts/surveillance-dashboard"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19995
+
+[services.development]
+run = "pnpm --filter @workspace/surveillance-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/surveillance-dashboard", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/surveillance-dashboard/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19995"
+BASE_PATH = "/"
