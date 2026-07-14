@@ -1,4 +1,5 @@
 const db = require('../../../db/index');
+const { requireAuth } = require('../../_auth');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 
@@ -8,6 +9,9 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const auth = await requireAuth(req, res);
+  if (!auth) return; // response already sent (401/403/503)
+
   const { eventId } = req.query;
   const { status } = req.body || {};
 
@@ -16,12 +20,16 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!db.hasDatabase) {
-    res.status(200).json({ success: true, event_id: eventId, status });
-    return;
-  }
-
   try {
+    // Tenant check: only update incidents that belong to an event in the
+    // caller's own organization -- prevents an operator from one tenant
+    // from changing another tenant's incident by guessing eventId.
+    const eventCheck = await db.query('SELECT organization_id FROM events WHERE id = $1', [eventId]);
+    if (eventCheck.rows.length === 0 || eventCheck.rows[0].organization_id !== auth.organizationId) {
+      res.status(404).json({ success: false, error: 'Incident not found in your organization' });
+      return;
+    }
+
     await db.query(
       `UPDATE ai_detections
        SET bounding_box = jsonb_set(COALESCE(bounding_box, '{}'), '{incident_status}', to_jsonb($1::text))
