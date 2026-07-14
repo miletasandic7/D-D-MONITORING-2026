@@ -9,7 +9,7 @@ import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 // runtime (e.g. a plain `pnpm build` at the workspace root, or CI) fall back
 // to sane defaults instead of hard-failing config evaluation.
 const rawPort = process.env.PORT;
-const port = rawPort ? Number(rawPort) : 5173;
+const port = rawPort ? Number(rawPort) : 3000;
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
