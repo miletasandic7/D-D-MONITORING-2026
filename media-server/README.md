@@ -71,3 +71,25 @@ curl http://localhost:8888/CAM-01/index.m3u8
 
 This exact sequence was used to verify the fix in this repository before
 committing — see the main README for details.
+
+## Related: event-triggered recording (Phase 3)
+
+`workers/recording-worker.js` is a second persistent process (also NOT
+Vercel-hostable) that listens for new events in Postgres and records a
+short segment straight from each camera's RTSP source via ffmpeg,
+uploading it to object storage. Run it on the same host as MediaMTX, or
+anywhere with network access to both the cameras and the database:
+
+```bash
+node workers/recording-worker.js
+```
+
+`workers/retention-job.js` deletes recordings past their per-camera
+retention window; run it on a schedule (cron, systemd timer, etc.):
+
+```bash
+node workers/retention-job.js
+```
+
+Both require `DATABASE_URL` and the `STORAGE_*` object storage env vars
+documented in `.env.example`.

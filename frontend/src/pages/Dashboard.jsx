@@ -152,6 +152,7 @@ export default function Dashboard() {
   const [cameras, setCameras] = useState(null);
   const [camerasError, setCamerasError] = useState(null);
   const [streamErrors, setStreamErrors] = useState({});
+  const [snapshotStatus, setSnapshotStatus] = useState({});
   const [updatingIncidentId, setUpdatingIncidentId] = useState(null);
   const [error, setError] = useState(null);
 
@@ -255,6 +256,38 @@ export default function Dashboard() {
     const camName = cameras.find((c) => c.id === camId)?.name || camId;
     addAuditEntry(`Triggered voice talkdown on ${camName}`);
     setTimeout(() => setTalkdownActive(null), 5000);
+  };
+
+  // Captures the current frame from a camera's <video> element via
+  // Canvas and uploads it through POST /api/snapshots (Phase 3). This
+  // only works once the stream has an actual frame decoded -- if the
+  // video hasn't started playing yet, the canvas capture will be blank,
+  // which is why we check readyState first.
+  const takeSnapshot = async (camId) => {
+    const video = document.getElementById(`video-${camId}`);
+    if (!video || video.readyState < 2) {
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'error' }));
+      setTimeout(() => setSnapshotStatus((prev) => ({ ...prev, [camId]: null })), 3000);
+      return;
+    }
+
+    setSnapshotStatus((prev) => ({ ...prev, [camId]: 'capturing' }));
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+
+      await api.post('/snapshots', { camera_id: camId, image_base64: imageBase64 });
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'success' }));
+      const camName = cameras.find((c) => c.id === camId)?.name || camId;
+      addAuditEntry(`Captured snapshot from ${camName}`);
+    } catch (err) {
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'error' }));
+    } finally {
+      setTimeout(() => setSnapshotStatus((prev) => ({ ...prev, [camId]: null })), 3000);
+    }
   };
 
   const submitAddCamera = async (e) => {
@@ -1498,8 +1531,18 @@ export default function Dashboard() {
                       )}
                       <video id={`video-${cam.id}`} controls muted playsInline className="camera-video" />
                     </div>
-                    {/* Talkdown control */}
+                    {/* Snapshot + talkdown controls */}
                     <div className="talkdown-row">
+                      <button
+                        type="button"
+                        className="talkdown-btn"
+                        onClick={() => takeSnapshot(cam.id)}
+                        disabled={snapshotStatus[cam.id] === 'capturing'}
+                      >
+                        {snapshotStatus[cam.id] === 'capturing' ? 'Capturing...' :
+                          snapshotStatus[cam.id] === 'success' ? 'Snapshot saved' :
+                          snapshotStatus[cam.id] === 'error' ? 'Snapshot failed' : 'Take Snapshot'}
+                      </button>
                       <button
                         type="button"
                         className={`talkdown-btn${talkdownActive === cam.id ? ' talkdown-active' : ''}`}
