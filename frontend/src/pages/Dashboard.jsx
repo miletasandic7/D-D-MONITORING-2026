@@ -786,7 +786,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" role="main">
         <header className="topbar">
           <div>
             <p className="eyebrow">Security Command Center</p>

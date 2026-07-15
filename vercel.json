@@ -35,6 +35,7 @@
   ],
   "rewrites": [
     { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/llms.txt", "destination": "/llms.txt" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
