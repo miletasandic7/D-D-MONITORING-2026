@@ -782,7 +782,7 @@ export default function Dashboard() {
             <p className="sidebar-copy">Security monitoring, detections, and camera intelligence.</p>
           </div>
         </aside>
-        <main className="dashboard-main">
+        <main className="dashboard-main" role="main">
           <div className="topbar">
             <div>
               <p className="eyebrow">Security Command Center</p>
@@ -905,7 +905,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" role="main">
         <header className="topbar">
           <div>
             <p className="eyebrow">Security Command Center</p>
@@ -966,6 +966,7 @@ export default function Dashboard() {
                     <button
                       key={plan.id}
                       type="button"
+                      role="button"
                       className={`plan-card${selectedPlanId === plan.id ? ' plan-card-active' : ''}`}
                       onClick={() => {
                         setSelectedPlanId(plan.id);

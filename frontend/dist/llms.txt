@@ -1,0 +1,44 @@
+# D&D Global AI Surveillance
+
+D&D Global AI Surveillance is a production-ready Security Operations Center (SOC) interface for advanced AI-powered security monitoring and threat detection.
+
+## Features
+
+- **Real-time Camera Monitoring**: Live HLS video streams from surveillance cameras
+- **AI Detection**: Automated threat detection using AI and machine learning
+- **Incident Management**: Comprehensive incident tracking and response workflow
+- **Activity Timeline**: Real-time activity feed showing security events
+- **Alarm Response**: Automatic alarm mapping and incident reporting
+- **User Management**: Multi-user access with role-based permissions
+- **Advanced Filtering**: Smart search with object type, color, and equipment attributes
+
+## Technology Stack
+
+- **Frontend**: React with Vite build system
+- **Authentication**: Supabase Auth
+- **Database**: PostgreSQL with real-time subscriptions
+- **Video Streaming**: HLS.js for live camera feeds
+- **Styling**: Custom CSS with cyber/security aesthetic
+- **Deployment**: Vercel with automatic CI/CD
+
+## API Endpoints
+
+- `GET /api/cameras` - Retrieve camera inventory
+- `POST /api/cameras` - Add new camera
+- `DELETE /api/cameras` - Remove camera
+- `GET /api/incidents` - Get security incidents
+- `PATCH /api/incidents/:id/status` - Update incident status
+- `GET /api/search/attributes` - Advanced search filters
+
+## Use Cases
+
+This SOC interface is designed for:
+- Security operations centers
+- Surveillance monitoring teams
+- Law enforcement agencies
+- Enterprise security departments
+- Critical infrastructure protection
+
+## Documentation
+
+For API documentation and integration guides, see the project repository.
