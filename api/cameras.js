@@ -1,5 +1,5 @@
 const db = require('../db/index');
-const { requireAuth } = require('./_auth');
+const { requireAuth, getAccessibleCameraIds } = require('./_auth');
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
@@ -7,13 +7,30 @@ module.exports = async (req, res) => {
     if (!auth) return; // response already sent (401/403/503)
 
     try {
-      const result = await db.query(
-        `SELECT id, name, rtsp_url, location, lat, lng, enabled, resolution, fps, codec
-         FROM cameras
-         WHERE organization_id = $1
-         ORDER BY id`,
-        [auth.organizationId],
-      );
+      const accessibleIds = await getAccessibleCameraIds(auth);
+      // accessibleIds === null means "no extra restriction" (org_admin/
+      // platform_admin); an operator with zero assignments gets an
+      // empty result, not the whole organization's cameras.
+      if (accessibleIds !== null && accessibleIds.length === 0) {
+        res.status(200).json({ success: true, count: 0, cameras: [] });
+        return;
+      }
+
+      const result = accessibleIds === null
+        ? await db.query(
+            `SELECT id, name, rtsp_url, location, lat, lng, enabled, resolution, fps, codec
+             FROM cameras
+             WHERE organization_id = $1
+             ORDER BY id`,
+            [auth.organizationId],
+          )
+        : await db.query(
+            `SELECT id, name, rtsp_url, location, lat, lng, enabled, resolution, fps, codec
+             FROM cameras
+             WHERE organization_id = $1 AND id = ANY($2::varchar[])
+             ORDER BY id`,
+            [auth.organizationId, accessibleIds],
+          );
       res.status(200).json({ success: true, count: result.rows.length, cameras: result.rows });
     } catch (err) {
       console.error('GET /api/cameras error:', err.message);

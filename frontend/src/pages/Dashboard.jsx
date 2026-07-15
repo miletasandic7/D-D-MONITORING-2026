@@ -576,19 +576,54 @@ export default function Dashboard() {
       });
   }, [authChecked]);
 
-  // Initialize HLS for each camera video element
+  // Initialize HLS for each camera video element. As of Phase 2, each
+  // camera stream requires a short-lived token (see api/camera-views and
+  // media-server's authHTTPAddress hook) -- the raw manifest URL alone is
+  // no longer sufficient, and every view is logged server-side.
   useEffect(() => {
     if (!authChecked || !cameras) return undefined;
 
+    let cancelled = false;
     const hlsInstances = [];
+    const openViewLogIds = [];
     setStreamErrors({});
 
-    cameras.forEach((cam) => {
-      if (cam.enabled === false) return;
+    const closeViewLog = (viewLogId) => {
+      if (!viewLogId) return;
+      api.patch(`/camera-views/${viewLogId}`).catch(() => {
+        // Best-effort: if this fails (e.g. network drop on tab close),
+        // the view log simply stays open with no ended_at. Not fatal --
+        // it just means that session's duration won't show as closed.
+      });
+    };
+
+    async function initCamera(cam) {
       const video = document.getElementById(`video-${cam.id}`);
       if (!video) return;
 
-      const manifestUrl = buildHlsManifestUrl(cam.id);
+      let streamToken;
+      let viewLogId;
+      try {
+        const res = await api.post('/camera-views', { camera_id: cam.id });
+        streamToken = res.data.streamToken;
+        viewLogId = res.data.viewLogId;
+      } catch (err) {
+        if (cancelled) return;
+        setStreamErrors((prev) => ({
+          ...prev,
+          [cam.id]: err.response?.status === 404
+            ? 'You do not have access to this camera.'
+            : 'Could not start a viewing session for this camera.',
+        }));
+        return;
+      }
+      if (cancelled) {
+        closeViewLog(viewLogId); // effect was torn down while the request was in flight
+        return;
+      }
+      openViewLogIds.push(viewLogId);
+
+      const manifestUrl = `${buildHlsManifestUrl(cam.id)}?token=${encodeURIComponent(streamToken)}`;
 
       if (Hls.isSupported()) {
         const hls = new Hls();
@@ -617,10 +652,17 @@ export default function Dashboard() {
           [cam.id]: 'This browser does not support HLS playback.',
         }));
       }
+    }
+
+    cameras.forEach((cam) => {
+      if (cam.enabled === false) return;
+      initCamera(cam);
     });
 
     return () => {
+      cancelled = true;
       hlsInstances.forEach((hls) => hls.destroy());
+      openViewLogIds.forEach(closeViewLog);
     };
   }, [cameras, authChecked]);
 

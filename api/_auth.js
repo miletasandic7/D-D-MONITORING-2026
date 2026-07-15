@@ -133,4 +133,43 @@ async function requireAuth(req, res, { roles } = {}) {
   };
 }
 
-module.exports = { requireAuth };
+/**
+ * Returns the set of camera ids this caller is allowed to see, or null
+ * if the caller has unrestricted access to their whole organization
+ * (org_admin / platform_admin). Operators are restricted to cameras on
+ * sites they're actively assigned to via operator_assignments.
+ */
+async function getAccessibleCameraIds(auth) {
+  if (auth.userType === 'org_admin' || auth.userType === 'platform_admin') {
+    return null; // no extra filter -- organization_id scoping is enough
+  }
+
+  const { rows } = await db.query(
+    `SELECT c.id
+     FROM cameras c
+     JOIN operator_assignments oa ON oa.site_id = c.site_id AND oa.active
+     WHERE oa.user_id = $1 AND c.organization_id = $2`,
+    [auth.userId, auth.organizationId],
+  );
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Throws-free check: does this caller have access to a specific camera?
+ * Used by endpoints that act on one camera_id (stream tokens, view logs).
+ */
+async function canAccessCamera(auth, cameraId) {
+  const { rows } = await db.query('SELECT organization_id, site_id FROM cameras WHERE id = $1', [cameraId]);
+  if (rows.length === 0) return false;
+  const camera = rows[0];
+  if (camera.organization_id !== auth.organizationId) return false;
+  if (auth.userType === 'org_admin' || auth.userType === 'platform_admin') return true;
+
+  const assignment = await db.query(
+    'SELECT 1 FROM operator_assignments WHERE user_id = $1 AND site_id = $2 AND active',
+    [auth.userId, camera.site_id],
+  );
+  return assignment.rows.length > 0;
+}
+
+module.exports = { requireAuth, getAccessibleCameraIds, canAccessCamera };

@@ -21,6 +21,19 @@ hlsSegmentDuration: 1s
 # Restrict this to your real dashboard domain in production instead of '*'.
 hlsAllowOrigin: '*'
 
+# --- Authentication for reads (Phase 2) ---
+# Every HLS/WebRTC read request is checked against the platform's API
+# before being allowed. Publishing (cameras pushing RTSP in) is left
+# unauthenticated here because it happens on the trusted camera-network
+# side, not the public internet -- adjust authHTTPExclude if your setup
+# differs (e.g. cameras publish over the public internet too).
+authMethod: http
+authHTTPAddress: https://<your-vercel-domain>/api/verify-stream-token
+authHTTPExclude:
+  - action: publish
+  - action: api
+  - action: metrics
+
 # --- WebRTC (optional, lower latency than HLS if you want it later) ---
 webrtc: yes
 webrtcAddress: :8889
