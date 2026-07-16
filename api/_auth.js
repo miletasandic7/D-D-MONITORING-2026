@@ -26,6 +26,7 @@ async function verifyToken(req) {
   const token = header.slice('Bearer '.length).trim();
 
   if (!SUPABASE_JWT_SECRET) {
+    console.error('[auth:503] SUPABASE_JWT_SECRET env var is not set on this deployment');
     const err = new Error('Server auth is not configured (SUPABASE_JWT_SECRET missing)');
     err.statusCode = 503;
     throw err;
@@ -59,6 +60,7 @@ async function getDefaultOrganizationId() {
     `SELECT id FROM organizations WHERE name = 'Default Organization' ORDER BY created_at ASC LIMIT 1`,
   );
   if (rows.length === 0) {
+    console.error('[auth:503] No "Default Organization" row found -- have db/migrations/001_multi_tenant_foundation.sql (and later) been run against this DATABASE_URL?');
     const err = new Error('No default organization configured. Run db/migrations/001_multi_tenant_foundation.sql first.');
     err.statusCode = 503;
     throw err;
@@ -95,6 +97,7 @@ async function syncUserProfile({ authUserId, email }) {
  */
 async function requireAuth(req, res, { roles } = {}) {
   if (!db.hasDatabase) {
+    console.error('[auth:503] DATABASE_URL is missing or the "pg" module failed to load -- see /api/health for details');
     res.status(503).json({ success: false, error: 'Database not configured. Set DATABASE_URL environment variable.' });
     return null;
   }
