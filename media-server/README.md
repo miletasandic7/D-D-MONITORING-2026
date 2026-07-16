@@ -93,3 +93,24 @@ node workers/retention-job.js
 
 Both require `DATABASE_URL` and the `STORAGE_*` object storage env vars
 documented in `.env.example`.
+
+## Related: multi-node registry (Phase 5)
+
+For more than one MediaMTX instance (e.g. one per region), register
+each node once via `POST /api/media-nodes` (platform_admin only) --
+this returns a `heartbeat_secret`, shown only at creation time. Run
+`workers/media-node-heartbeat.js` alongside that MediaMTX instance so
+the registry knows it's alive:
+
+```bash
+API_BASE_URL=https://your-vercel-domain/api \
+MEDIA_NODE_ID=<id from the create response> \
+MEDIA_NODE_HEARTBEAT_SECRET=<secret from the create response> \
+node workers/media-node-heartbeat.js
+```
+
+New cameras are automatically assigned to the least-loaded online node
+(optionally matching a preferred region); a node with no heartbeat in
+the last `MEDIA_NODE_HEARTBEAT_FRESHNESS_SECONDS` is treated as
+offline and skipped, so a crashed node just stops receiving new
+cameras rather than needing manual failover.

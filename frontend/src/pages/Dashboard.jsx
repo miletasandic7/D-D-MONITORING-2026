@@ -86,8 +86,13 @@ const PLAN_OPTIONS = [
   },
 ];
 
-function buildHlsManifestUrl(cameraId) {
-  return `${hlsBaseUrl}/${cameraId}/index.m3u8`;
+function buildHlsManifestUrl(cameraId, cameraHlsBaseUrl) {
+  // Phase 5: each camera may have its own media node (multi-region
+  // streaming), reported by the API as hls_base_url. Fall back to the
+  // single global VITE_HLS_BASE_URL for cameras with no node assigned
+  // (e.g. single-node deployments that haven't adopted the registry).
+  const base = (cameraHlsBaseUrl || hlsBaseUrl).replace(/\/$/, '');
+  return `${base}/${cameraId}/index.m3u8`;
 }
 
 function buildCameraGeo(camera) {
@@ -656,7 +661,7 @@ export default function Dashboard() {
       }
       openViewLogIds.push(viewLogId);
 
-      const manifestUrl = `${buildHlsManifestUrl(cam.id)}?token=${encodeURIComponent(streamToken)}`;
+      const manifestUrl = `${buildHlsManifestUrl(cam.id, cam.hls_base_url)}?token=${encodeURIComponent(streamToken)}`;
 
       if (Hls.isSupported()) {
         const hls = new Hls();
