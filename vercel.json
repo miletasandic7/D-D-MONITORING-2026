@@ -1,5 +1,5 @@
-﻿{
-  "installCommand": "cd frontend && npm install",
+{
+  "installCommand": "npm install && cd frontend && npm install",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "headers": [
@@ -7,35 +7,35 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
         },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },
         {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
         },
         {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://www.paypal.com https://www.paypalobjects.com 'unsafe-inline'; frame-src https://www.paypal.com https://www.sandbox.paypal.com; connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://*.supabase.co; img-src 'self' data: https://www.paypalobjects.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self';"
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
         },
         {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=63072000; includeSubDomains; preload"
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.paypalobjects.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; media-src 'self' https://*.supabase.co https://*.fly.dev https://*.railway.app; connect-src 'self' https://*.supabase.co https://*.fly.dev https://*.railway.app https://api.paypal.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com; frame-src https://www.paypal.com https://www.sandbox.paypal.com; worker-src 'self' blob:; object-src 'none';"
         }
       ]
     }
   ],
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/((?!api/).*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/llms.txt", "destination": "/llms.txt" },
+    { "source": "/((?!api/|hls/).*)", "destination": "/index.html" }
   ]
 }

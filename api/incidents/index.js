@@ -1,4 +1,5 @@
-﻿const db = require('../../../db/index');
+const db = require('../../db/index');
+const { requireAuth } = require('../_auth');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 
@@ -8,12 +9,10 @@ module.exports = async (req, res) => {
     return;
   }
 
-  try {
-    if (!db.hasDatabase) {
-      res.status(503).json({ success: false, error: 'Database not configured. Set DATABASE_URL environment variable.' });
-      return;
-    }
+  const auth = await requireAuth(req, res);
+  if (!auth) return; // response already sent (401/403/503)
 
+  try {
     const { rows } = await db.query(`
       SELECT
         a.id,
@@ -28,9 +27,10 @@ module.exports = async (req, res) => {
       FROM ai_detections a
       JOIN events e ON a.event_id = e.id
       WHERE e.is_dismissed = FALSE
+        AND e.organization_id = $1
       ORDER BY a.timestamp DESC
       LIMIT 100
-    `);
+    `, [auth.organizationId]);
 
     const incidents = rows.map((row) => ({
       event_id: row.event_id,
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
 
     res.status(200).json({ success: true, count: incidents.length, incidents, statuses: ALLOWED_STATUSES });
   } catch (err) {
-    console.error('Error loading incident queue:', err);
+    console.error('GET /api/incidents error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 };

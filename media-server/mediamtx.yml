@@ -1,0 +1,58 @@
+# Minimal MediaMTX config for the D&D Monitoring dashboard.
+# Full reference: https://github.com/bluenviron/mediamtx/blob/main/mediamtx.yml
+
+logLevel: info
+
+# --- RTSP (only needed if a camera pushes to this server instead of
+#     MediaMTX pulling from the camera; most IP cameras support MediaMTX
+#     pulling directly via the "source" field below, so this can usually
+#     stay as-is) ---
+rtsp: yes
+rtspAddress: :8554
+
+# --- HLS output consumed by the browser via hls.js ---
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+# Allow the dashboard's origin to fetch the manifest/segments (CORS).
+# Restrict this to your real dashboard domain in production instead of '*'.
+hlsAllowOrigin: '*'
+
+# --- Authentication for reads (Phase 2) ---
+# Every HLS/WebRTC read request is checked against the platform's API
+# before being allowed. Publishing (cameras pushing RTSP in) is left
+# unauthenticated here because it happens on the trusted camera-network
+# side, not the public internet -- adjust authHTTPExclude if your setup
+# differs (e.g. cameras publish over the public internet too).
+authMethod: http
+authHTTPAddress: https://<your-vercel-domain>/api/verify-stream-token
+authHTTPExclude:
+  - action: publish
+  - action: api
+  - action: metrics
+
+# --- WebRTC (optional, lower latency than HLS if you want it later) ---
+webrtc: yes
+webrtcAddress: :8889
+
+# --- Cameras ---
+# One entry per camera. "name" here must match the camera `id` stored in
+# the `cameras` table / returned by GET /api/cameras, because the frontend
+# requests:  {VITE_HLS_BASE_URL}/{cameraId}/index.m3u8
+paths:
+  # Example — replace with your real cameras:
+  CAM-01:
+    source: rtsp://username:password@192.168.1.50:554/stream1
+    sourceOnDemand: no
+
+  CAM-02:
+    source: rtsp://username:password@192.168.1.51:554/stream1
+    sourceOnDemand: no
+
+  # For quick local testing without a real camera, you can simulate one
+  # with ffmpeg instead of setting `source:` above — see README.md in
+  # this folder — and MediaMTX will accept the publish under the same
+  # path name automatically.

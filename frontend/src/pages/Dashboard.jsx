@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Hls from 'hls.js';
@@ -48,17 +48,6 @@ function loadPayPalSdk(clientId, currency = 'USD') {
   return paypalSdkPromise;
 }
 
-const CAMERA_GEO = {
-  'CAM-01': { lat: 45.8154, lng: 15.9819, label: 'Main Entrance', note: 'front access lane and reception perimeter' },
-  'CAM-02': { lat: 45.8129, lng: 15.9672, label: 'Parking Lot', note: 'northwest parking bay near service road' },
-  'CAM-03': { lat: 45.8138, lng: 15.9862, label: 'Lobby', note: 'central lobby and badge access point' },
-  'CAM-04': { lat: 45.8087, lng: 15.9728, label: 'Server Room', note: 'secured internal infrastructure room' },
-  'CAM-05': { lat: 45.8071, lng: 15.9594, label: 'Warehouse A', note: 'east warehouse loading corridor' },
-  'CAM-06': { lat: 45.8061, lng: 15.9524, label: 'Warehouse B', note: 'west warehouse receiving corridor' },
-  'CAM-07': { lat: 45.8047, lng: 15.9658, label: 'Loading Dock', note: 'truck access and unloading platform' },
-  'CAM-08': { lat: 45.8189, lng: 15.9715, label: 'Perimeter North', note: 'north fence line and exterior patrol route' },
-  'CAM-09': { lat: 45.8032, lng: 15.9781, label: 'Perimeter South', note: 'southern fence line and back perimeter' },
-};
 
 const PLAN_OPTIONS = [
   {
@@ -102,12 +91,11 @@ function buildHlsManifestUrl(cameraId) {
 }
 
 function buildCameraGeo(camera) {
-  const fallback = CAMERA_GEO[camera?.id] || {};
   return {
-    lat: Number(camera?.lat ?? fallback.lat ?? 45.8154),
-    lng: Number(camera?.lng ?? fallback.lng ?? 15.9819),
-    label: camera?.name || fallback.label || camera?.id || 'Unknown location',
-    note: fallback.note || camera?.location || 'Security perimeter point',
+    lat: Number(camera?.lat ?? 0),
+    lng: Number(camera?.lng ?? 0),
+    label: camera?.name || camera?.id || 'Unknown location',
+    note: camera?.location || 'Security perimeter point',
   };
 }
 
@@ -136,13 +124,35 @@ function buildIncidentReport(event, camera, contacts, plan) {
   };
 }
 
+// Audio alarm - 3 beeps via Web Audio API
+function playAlarmBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.45, 0.9].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gainNode.gain.setValueAtTime(0.35, ctx.currentTime + delay);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.35);
+    });
+  } catch (e) { /* AudioContext unavailable or blocked */ }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const paypalButtonsRef = useRef(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [incidentsLoaded, setIncidentsLoaded] = useState(false);
-  const [cameras, setCameras] = useState([]);
+  const [cameras, setCameras] = useState(null);
+  const [camerasError, setCamerasError] = useState(null);
+  const [streamErrors, setStreamErrors] = useState({});
+  const [snapshotStatus, setSnapshotStatus] = useState({});
   const [updatingIncidentId, setUpdatingIncidentId] = useState(null);
   const [error, setError] = useState(null);
 
@@ -158,35 +168,50 @@ export default function Dashboard() {
   const [suppressEnabled, setSuppressEnabled] = useState(false);
   const [suppressThreshold, setSuppressThreshold] = useState(85);
 
-  // Phase 3 ΓÇö Camera Onboarding Wizard
+  // Phase 3 - Camera Onboarding Wizard
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardScanning, setWizardScanning] = useState(false);
   const [wizardSaving, setWizardSaving] = useState(false);
   const [wizardDone, setWizardDone] = useState(false);
-  const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
+  const [newCamera, setNewCamera] = useState({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
 
-  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
+  // Inline camera add form
+  const [showAddCam, setShowAddCam] = useState(false);
+  const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+  const [addCamSaving, setAddCamSaving] = useState(false);
+  const [addCamError, setAddCamError] = useState('');
+
+  // Audio alarm incident count tracker
+  const prevNewIncidentsRef = useRef(null);
+
+  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
   const closeWizard = () => setWizardOpen(false);
 
-  const runONVIFScan = () => {
+  const runONVIFScan = async () => {
     setWizardScanning(true);
-    setTimeout(() => {
-      const discovered = `rtsp://192.168.1.${100 + Math.floor(Math.random() * 50)}:554/stream1`;
-      setNewCamera((prev) => ({ ...prev, rtsp_url: prev.rtsp_url || discovered }));
+    try {
+      const res = await api.get('/cameras/scan');
+      if (res.data?.rtsp_url) {
+        setNewCamera((prev) => ({ ...prev, rtsp_url: prev.rtsp_url || res.data.rtsp_url }));
+      }
+    } catch {
+      // Auto-scan not available - user enters RTSP URL manually
+    } finally {
       setWizardScanning(false);
-      setWizardStep(2);
-    }, 2000);
+    }
   };
 
   const saveCamera = async () => {
     setWizardSaving(true);
     try {
       await api.post('/cameras', newCamera);
-      setCameras((prev) => [...prev, newCamera]);
-    } catch {
-      // optimistic add even if API isn't wired yet
-      setCameras((prev) => [...prev, newCamera]);
+      setCameras((prev) => [...(prev || []), newCamera]);
+    } catch (err) {
+      setWizardDone(false);
+      alert(err?.response?.data?.error || err.message || 'Failed to save camera.');
+      setWizardSaving(false);
+      return;
     } finally {
       setWizardSaving(false);
       setWizardDone(true);
@@ -194,24 +219,20 @@ export default function Dashboard() {
     }
   };
 
-  // Phase 3 ΓÇö Voice Talkdown
+  // Phase 3 - Voice Talkdown
   const [talkdownActive, setTalkdownActive] = useState(null);
 
-  // Phase 4 ΓÇö Audit Log
-  const [auditLog, setAuditLog] = useState([
-    { id: 1, ts: new Date(Date.now() - 1000 * 60 * 18).toLocaleTimeString(), user: 'operator@agency.com', action: 'Logged in to Security Dashboard' },
-    { id: 2, ts: new Date(Date.now() - 1000 * 60 * 15).toLocaleTimeString(), user: 'operator@agency.com', action: 'Viewed Incident Queue (3 open incidents)' },
-    { id: 3, ts: new Date(Date.now() - 1000 * 60 * 10).toLocaleTimeString(), user: 'operator@agency.com', action: 'Exported evidence package for Event #2' },
-  ]);
+  // Phase 4 - Audit Log
+  const [auditLog, setAuditLog] = useState([]);
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
   const addAuditEntry = (action) => setAuditLog((prev) => [{ id: Date.now(), ts: new Date().toLocaleTimeString(), user: currentUser?.email || 'operator', action }, ...prev].slice(0, 50));
 
-  // Phase 4 ΓÇö White-Label Branding
+  // Phase 4 - White-Label Branding
   const [brandMode, setBrandMode] = useState('default'); // 'default' | 'corporate'
   const brandName = brandMode === 'corporate' ? 'SecureOps Enterprise' : 'D&D Global AI Surveillance';
   const brandInitial = brandMode === 'corporate' ? 'S' : 'D';
 
-  // Phase 4 ΓÇö Subscription
+  // Phase 4 - Subscription
   const [showBilling, setShowBilling] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState('growth');
   const [checkoutStatus, setCheckoutStatus] = useState('');
@@ -228,7 +249,6 @@ export default function Dashboard() {
   const [paypalMountError, setPaypalMountError] = useState('');
   const [paypalMounting, setPaypalMounting] = useState(false);
 
-  const subscription = { tier: 'Enterprise', status: 'Active', validUntil: '2027-12-31', cameras: 'Unlimited', users: 'Unlimited', ai: 'Full AI Analytics', sla: '99.9% uptime SLA' };
   const selectedPlan = PLAN_OPTIONS.find((plan) => plan.id === selectedPlanId) || PLAN_OPTIONS[1];
 
   const triggerTalkdown = (camId) => {
@@ -236,6 +256,72 @@ export default function Dashboard() {
     const camName = cameras.find((c) => c.id === camId)?.name || camId;
     addAuditEntry(`Triggered voice talkdown on ${camName}`);
     setTimeout(() => setTalkdownActive(null), 5000);
+  };
+
+  // Captures the current frame from a camera's <video> element via
+  // Canvas and uploads it through POST /api/snapshots (Phase 3). This
+  // only works once the stream has an actual frame decoded -- if the
+  // video hasn't started playing yet, the canvas capture will be blank,
+  // which is why we check readyState first.
+  const takeSnapshot = async (camId) => {
+    const video = document.getElementById(`video-${camId}`);
+    if (!video || video.readyState < 2) {
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'error' }));
+      setTimeout(() => setSnapshotStatus((prev) => ({ ...prev, [camId]: null })), 3000);
+      return;
+    }
+
+    setSnapshotStatus((prev) => ({ ...prev, [camId]: 'capturing' }));
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+
+      await api.post('/snapshots', { camera_id: camId, image_base64: imageBase64 });
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'success' }));
+      const camName = cameras.find((c) => c.id === camId)?.name || camId;
+      addAuditEntry(`Captured snapshot from ${camName}`);
+    } catch (err) {
+      setSnapshotStatus((prev) => ({ ...prev, [camId]: 'error' }));
+    } finally {
+      setTimeout(() => setSnapshotStatus((prev) => ({ ...prev, [camId]: null })), 3000);
+    }
+  };
+
+  const submitAddCamera = async (e) => {
+    e.preventDefault();
+    if (!addCamForm.name.trim() || !addCamForm.rtsp_url.trim()) {
+      setAddCamError('Camera name and RTSP URL are required.');
+      return;
+    }
+    setAddCamSaving(true);
+    setAddCamError('');
+    const id = `CAM-${String((cameras?.length || 0) + 1).padStart(2, '0')}`;
+    const newCam = {
+      id,
+      name: addCamForm.name.trim(),
+      rtsp_url: addCamForm.rtsp_url.trim(),
+      location: addCamForm.location.trim() || id,
+      lat: addCamForm.lat ? Number(addCamForm.lat) : null,
+      lng: addCamForm.lng ? Number(addCamForm.lng) : null,
+      enabled: true,
+      resolution: '1920x1080',
+      fps: 30,
+      codec: 'H264',
+    };
+    try {
+      await api.post('/cameras', newCam);
+      setCameras((prev) => [...(prev || []), newCam]);
+      setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+      setShowAddCam(false);
+      addAuditEntry(`Added camera: ${newCam.name} (${id})`);
+    } catch (err) {
+      setAddCamError(err?.response?.data?.error || err.message || 'Failed to save camera.');
+    } finally {
+      setAddCamSaving(false);
+    }
   };
 
   const selectedPlanAmount = selectedPlan.paypalAmount;
@@ -396,39 +482,33 @@ export default function Dashboard() {
     };
   }, [paymentStep, requiredEmergencyFields, selectedPlan.id, selectedPlan.name, selectedPlanAmount, selectedPlanSupportsPaypal, emergencyDistrict, emergencyContacts.policeStation, emergencyContacts.fireService, emergencyContacts.ambulance, emergencyContacts.localCommand]);
 
-  // Phase 3 ΓÇö Push Notification Banner
+  // Phase 3 - Push Notification Banner
   const [notifications, setNotifications] = useState([]);
   const dismissNotification = (id) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
-  // Simulate a critical push notification after auth
-  useEffect(() => {
-    if (!authChecked) return;
-    const timer = setTimeout(() => {
-      setNotifications((prev) => [
-        ...prev,
-        { id: Date.now(), level: 'critical', title: 'Critical Alert', body: 'High-confidence intrusion detected at Main Entrance ΓÇö CAM-01', ts: new Date().toLocaleTimeString() },
-      ]);
-    }, 3500);
-    return () => clearTimeout(timer);
-  }, [authChecked]);
 
-  // Auth guard ΓÇö redirect to login if no active Supabase session
+  // Auth guard - redirect to login if no active Supabase session
   useEffect(() => {
     (async () => {
       try {
         const supabase = await getSupabaseClient();
         if (!supabase) {
+          localStorage.removeItem('currentUser');
           navigate('/', { replace: true });
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          // Clear stale session data
+          localStorage.removeItem('currentUser');
+          await supabase.auth.signOut();
           navigate('/', { replace: true });
         } else {
           setAuthChecked(true);
         }
       } catch (err) {
+        localStorage.removeItem('currentUser');
         navigate('/', { replace: true });
       }
     })();
@@ -440,7 +520,7 @@ export default function Dashboard() {
   };
 
   // Client-side filter + false-alarm suppression applied to incidents list
-  const filteredIncidents = incidents
+  const filteredIncidents = (incidents || [])
     .filter((item) => {
       if (suppressEnabled && Number(item.confidence) < suppressThreshold / 100) return false;
       if (filterCamera && String(item.camera_id || '').toLowerCase() !== filterCamera.toLowerCase()) return false;
@@ -458,7 +538,7 @@ export default function Dashboard() {
       return true;
     });
 
-  const activeCameras = cameras.filter((camera) => camera.enabled !== false).length;
+  const activeCameras = cameras ? cameras.filter((camera) => camera.enabled !== false).length : 0;
   const recentAlerts = filteredIncidents.filter((incident) => ['New', 'Acknowledged', 'In Progress'].includes(incident.status)).length;
 
   const recentEvents = filteredIncidents.slice(0, 20).map((item) => ({
@@ -477,7 +557,7 @@ export default function Dashboard() {
   }));
 
   const selectedAlarmEvent = recentEvents.find((event) => event.eventId === selectedAlarmId) || recentEvents[0] || null;
-  const selectedAlarmCamera = cameras.find((camera) => camera.id === selectedAlarmEvent?.camera_id) || cameras[0] || null;
+  const selectedAlarmCamera = cameras?.find((camera) => camera.id === selectedAlarmEvent?.camera_id) || cameras?.[0] || null;
   const selectedAlarmGeo = buildCameraGeo(selectedAlarmCamera);
   const generatedReport = buildIncidentReport(selectedAlarmEvent, selectedAlarmCamera, { district: emergencyDistrict, ...emergencyContacts }, selectedPlan);
   const reportSummary = selectedAlarmEvent
@@ -497,33 +577,127 @@ export default function Dashboard() {
       .catch((err) => setError(err.message));
   }, [authChecked]);
 
+  // Audio alarm: play 3 beeps when new 'New' incidents arrive
+  useEffect(() => {
+    if (!incidentsLoaded) return;
+    const newCount = incidents.filter((i) => i.status === 'New').length;
+    if (prevNewIncidentsRef.current !== null && newCount > prevNewIncidentsRef.current) {
+      playAlarmBeep();
+    }
+    prevNewIncidentsRef.current = newCount;
+  }, [incidents, incidentsLoaded]);
+
   // Fetch cameras once auth is confirmed
   useEffect(() => {
     if (!authChecked) return;
 
     api
       .get('/cameras')
-      .then((res) => setCameras(res.data.cameras))
-      .catch(() => setCameras([]));
+      .then((res) => {
+        setCameras(res.data.cameras || []);
+        setCamerasError(null);
+      })
+      .catch((err) => {
+        const backendMessage = err.response?.data?.error;
+        setCamerasError(
+          backendMessage ||
+          (err.response
+            ? `Camera service returned an error (HTTP ${err.response.status}).`
+            : 'Could not reach the camera API. Check your network connection or API deployment.')
+        );
+        setCameras([]);
+      });
   }, [authChecked]);
 
-  // Initialize HLS for each camera video element
+  // Initialize HLS for each camera video element. As of Phase 2, each
+  // camera stream requires a short-lived token (see api/camera-views and
+  // media-server's authHTTPAddress hook) -- the raw manifest URL alone is
+  // no longer sufficient, and every view is logged server-side.
   useEffect(() => {
-    if (!authChecked) return;
+    if (!authChecked || !cameras) return undefined;
+
+    let cancelled = false;
+    const hlsInstances = [];
+    const openViewLogIds = [];
+    setStreamErrors({});
+
+    const closeViewLog = (viewLogId) => {
+      if (!viewLogId) return;
+      api.patch(`/camera-views/${viewLogId}`).catch(() => {
+        // Best-effort: if this fails (e.g. network drop on tab close),
+        // the view log simply stays open with no ended_at. Not fatal --
+        // it just means that session's duration won't show as closed.
+      });
+    };
+
+    async function initCamera(cam) {
+      const video = document.getElementById(`video-${cam.id}`);
+      if (!video) return;
+
+      let streamToken;
+      let viewLogId;
+      try {
+        const res = await api.post('/camera-views', { camera_id: cam.id });
+        streamToken = res.data.streamToken;
+        viewLogId = res.data.viewLogId;
+      } catch (err) {
+        if (cancelled) return;
+        setStreamErrors((prev) => ({
+          ...prev,
+          [cam.id]: err.response?.status === 404
+            ? 'You do not have access to this camera.'
+            : 'Could not start a viewing session for this camera.',
+        }));
+        return;
+      }
+      if (cancelled) {
+        closeViewLog(viewLogId); // effect was torn down while the request was in flight
+        return;
+      }
+      openViewLogIds.push(viewLogId);
+
+      const manifestUrl = `${buildHlsManifestUrl(cam.id)}?token=${encodeURIComponent(streamToken)}`;
+
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+          setStreamErrors((prev) => ({
+            ...prev,
+            [cam.id]: 'Stream unavailable. Check that the media server is running and reachable.',
+          }));
+        });
+        hls.loadSource(manifestUrl);
+        hls.attachMedia(video);
+        hlsInstances.push(hls);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (e.g. Safari)
+        video.src = manifestUrl;
+        video.addEventListener('error', () => {
+          setStreamErrors((prev) => ({
+            ...prev,
+            [cam.id]: 'Stream unavailable. Check that the media server is running and reachable.',
+          }));
+        });
+      } else {
+        setStreamErrors((prev) => ({
+          ...prev,
+          [cam.id]: 'This browser does not support HLS playback.',
+        }));
+      }
+    }
 
     cameras.forEach((cam) => {
-      const video = document.getElementById(`video-${cam.id}`);
-      if (video) {
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(buildHlsManifestUrl(cam.id));
-          hls.attachMedia(video);
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = buildHlsManifestUrl(cam.id);
-        }
-      }
+      if (cam.enabled === false) return;
+      initCamera(cam);
     });
-  }, [cameras]);
+
+    return () => {
+      cancelled = true;
+      hlsInstances.forEach((hls) => hls.destroy());
+      openViewLogIds.forEach(closeViewLog);
+    };
+  }, [cameras, authChecked]);
 
   // Evidence export: build a metadata JSON + simulated MP4 download
   const exportEvidence = (event) => {
@@ -596,7 +770,6 @@ export default function Dashboard() {
     }
   };
 
-  // Render nothing while the auth check is in flight
   if (!authChecked) return null;
 
   if (error) {
@@ -609,7 +782,7 @@ export default function Dashboard() {
             <p className="sidebar-copy">Security monitoring, detections, and camera intelligence.</p>
           </div>
         </aside>
-        <main className="dashboard-main">
+        <main className="dashboard-main" role="main">
           <div className="topbar">
             <div>
               <p className="eyebrow">Security Command Center</p>
@@ -627,8 +800,8 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-shell">
-      {/* ΓöÇΓöÇ Push Notification Banner ΓöÇΓöÇ */}
-      {notifications.length > 0 && (
+      {/* -- Push Notification Banner -- */}
+      {notifications && notifications.length > 0 && (
         <div className="notif-stack" role="alert" aria-live="assertive">
           {notifications.map((n) => (
             <div key={n.id} className={`notif-banner notif-${n.level}`}>
@@ -638,36 +811,38 @@ export default function Dashboard() {
                 <p>{n.body}</p>
               </div>
               <span className="notif-time">{n.ts}</span>
-              <button className="notif-dismiss" onClick={() => dismissNotification(n.id)} aria-label="Dismiss">Γ£ò</button>
+              <button className="notif-dismiss" onClick={() => dismissNotification(n.id)} aria-label="Dismiss">&#x2715;</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ΓöÇΓöÇ Camera Onboarding Wizard Modal ΓöÇΓöÇ */}
+      {/* -- Camera Onboarding Wizard Modal -- */}
       {wizardOpen && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add new camera">
           <section className="modal-card">
             <div className="modal-header">
-              <h3>{wizardStep === 3 ? 'Camera Added Γ£ô' : 'Add New Camera'}</h3>
-              <button className="notif-dismiss" onClick={closeWizard} aria-label="Close">Γ£ò</button>
+              <h3>{wizardStep === 3 ? 'Camera Added' : 'Add New Camera'}</h3>
+              <button className="notif-dismiss" onClick={closeWizard} aria-label="Close">&#x2715;</button>
             </div>
 
             {wizardStep === 1 && (
               <>
-                <p className="ls-desc">Scan your network for ONVIF-compatible devices, or enter stream details manually.</p>
+                <p className="ls-desc">Enter your camera stream details manually or use ONVIF auto-scan if supported by your network.</p>
                 <div className="wizard-fields">
                   <label className="search-field"><span>Camera ID</span><input value={newCamera.id} onChange={(e) => setNewCamera((p) => ({ ...p, id: e.target.value }))} placeholder="CAM-10" /></label>
                   <label className="search-field"><span>Display Name</span><input value={newCamera.name} onChange={(e) => setNewCamera((p) => ({ ...p, name: e.target.value }))} placeholder="South Perimeter" /></label>
                   <label className="search-field"><span>Location</span><input value={newCamera.location} onChange={(e) => setNewCamera((p) => ({ ...p, location: e.target.value }))} placeholder="south_entrance" /></label>
-                  <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://ΓÇª" /></label>
+                  <label className="search-field"><span>RTSP URL</span><input value={newCamera.rtsp_url} onChange={(e) => setNewCamera((p) => ({ ...p, rtsp_url: e.target.value }))} placeholder="rtsp://..." /></label>
+                  <label className="search-field"><span>Latitude (optional)</span><input type="number" step="any" value={newCamera.lat} onChange={(e) => setNewCamera((p) => ({ ...p, lat: e.target.value }))} placeholder="e.g. 45.8154" /></label>
+                  <label className="search-field"><span>Longitude (optional)</span><input type="number" step="any" value={newCamera.lng} onChange={(e) => setNewCamera((p) => ({ ...p, lng: e.target.value }))} placeholder="e.g. 15.9819" /></label>
                 </div>
                 <div className="wizard-actions">
                   <button className="ghost-button" type="button" onClick={runONVIFScan} disabled={wizardScanning}>
-                    {wizardScanning ? 'Γƒ│ Scanning networkΓÇª' : 'Γîû Auto-scan (ONVIF)'}
+                    {wizardScanning ? 'Scanning network...' : 'Auto-scan (ONVIF)'}
                   </button>
                   <button className="primary-button" type="button" onClick={() => setWizardStep(2)} disabled={!newCamera.id || !newCamera.name}>
-                    Next ΓåÆ
+                    Next
                   </button>
                 </div>
               </>
@@ -675,7 +850,7 @@ export default function Dashboard() {
 
             {wizardStep === 2 && (
               <>
-                <p className="ls-desc">Review the camera configuration before saving to Supabase.</p>
+                <p className="ls-desc">Review the camera configuration before saving to the database.</p>
                 <table className="wizard-review-table">
                   <tbody>
                     {Object.entries(newCamera).map(([k, v]) => (
@@ -684,9 +859,9 @@ export default function Dashboard() {
                   </tbody>
                 </table>
                 <div className="wizard-actions">
-                  <button className="ghost-button" type="button" onClick={() => setWizardStep(1)}>ΓåÉ Back</button>
+                  <button className="ghost-button" type="button" onClick={() => setWizardStep(1)}>Back</button>
                   <button className="primary-button" type="button" onClick={saveCamera} disabled={wizardSaving}>
-                    {wizardSaving ? 'SavingΓÇª' : 'Save to Database'}
+                    {wizardSaving ? 'Saving...' : 'Save to Database'}
                   </button>
                 </div>
               </>
@@ -711,11 +886,17 @@ export default function Dashboard() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
-          <a className="sidebar-nav-item active" href="#overview">Overview</a>
+          <a className="sidebar-nav-item active" href="#overview">Dashboard</a>
           <a className="sidebar-nav-item" href="#cameras">Cameras</a>
+          <a className="sidebar-nav-item" href="#streams">Live Streams</a>
+          <a className="sidebar-nav-item" href="#alerts">Alerts</a>
           <a className="sidebar-nav-item" href="#events">Incidents</a>
-          <a className="sidebar-nav-item" href="#audit">Audit Trail</a>
-          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>ΓÜÖ Subscription</button>
+          <a className="sidebar-nav-item" href="#map">Map</a>
+          <a className="sidebar-nav-item" href="#detection">AI Detection</a>
+          <a className="sidebar-nav-item" href="#reports">Reports</a>
+          <a className="sidebar-nav-item" href="#users">Users</a>
+          <a className="sidebar-nav-item" href="#settings">Settings</a>
+          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
@@ -724,19 +905,49 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <main className="dashboard-main">
+      <main className="dashboard-main" role="main">
         <header className="topbar">
           <div>
             <p className="eyebrow">Security Command Center</p>
             <h2 id="overview">Dashboard</h2>
           </div>
           <div className="topbar-actions">
-            <button className="ghost-button" type="button" onClick={openWizard}>+ Add Camera</button>
-            <button className="primary-button" type="button">New Alert</button>
+            <div className="search-bar">
+              <input type="text" placeholder="Global search..." className="search-input" />
+              <button className="search-button" aria-label="Search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              </button>
+            </div>
+            <button className="icon-button" aria-label="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </button>
+            <button className="icon-button" aria-label="Settings" onClick={() => setShowBilling(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <div className="user-profile">
+              <div className="user-avatar">
+                {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            </div>
+            <button className="primary-button" onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}>
+              + Add Camera
+            </button>
+            <button className="ghost-button" onClick={() => setWizardOpen(true)}>
+              + Create Incident
+            </button>
           </div>
         </header>
 
-        {/* ΓöÇΓöÇ Subscription / Billing Panel ΓöÇΓöÇ */}
+        {/* -- Subscription / Billing Panel -- */}
         {showBilling && (
           <section className="dashboard-panel billing-panel" id="billing">
             <div className="panel-heading">
@@ -744,7 +955,7 @@ export default function Dashboard() {
                 <p className="eyebrow">License Management</p>
                 <h3>Client Plans &amp; Checkout</h3>
               </div>
-              <button className="notif-dismiss" type="button" onClick={() => setShowBilling(false)}>Γ£ò</button>
+              <button className="notif-dismiss" type="button" onClick={() => setShowBilling(false)}>&#x2715;</button>
             </div>
 
             <div className="billing-grid billing-grid-wide">
@@ -755,6 +966,7 @@ export default function Dashboard() {
                     <button
                       key={plan.id}
                       type="button"
+                      role="button"
                       className={`plan-card${selectedPlanId === plan.id ? ' plan-card-active' : ''}`}
                       onClick={() => {
                         setSelectedPlanId(plan.id);
@@ -872,7 +1084,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* ΓöÇΓöÇ Smart Search v2 + False Alarm controls ΓöÇΓöÇ */}
+        {/* -- Smart Search v2 + False Alarm controls -- */}
         <section className="search-panel dashboard-panel" id="search" aria-label="Smart search filters">
           <div className="panel-heading">
             <div>
@@ -905,20 +1117,20 @@ export default function Dashboard() {
           <div className="search-grid">
             <label className="search-field">
               <span>Object Type</span>
-              <input type="text" placeholder="Person, VehicleΓÇª" value={filterObjectType} onChange={(e) => setFilterObjectType(e.target.value)} />
+              <input type="text" placeholder="Person, Vehicle..." value={filterObjectType} onChange={(e) => setFilterObjectType(e.target.value)} />
             </label>
             <label className="search-field">
               <span>Camera</span>
               <select value={filterCamera} onChange={(e) => setFilterCamera(e.target.value)}>
                 <option value="">All cameras</option>
-                {cameras.map((cam) => (
+                {cameras && cameras.map((cam) => (
                   <option key={cam.id} value={cam.id}>{cam.name}</option>
                 ))}
               </select>
             </label>
             <label className="search-field">
               <span>Zone / Location</span>
-              <input type="text" placeholder="entrance, parkingΓÇª" value={filterZone} onChange={(e) => setFilterZone(e.target.value)} />
+              <input type="text" placeholder="entrance, parking..." value={filterZone} onChange={(e) => setFilterZone(e.target.value)} />
             </label>
             <label className="search-field">
               <span>Direction</span>
@@ -936,7 +1148,7 @@ export default function Dashboard() {
             </label>
             <label className="search-field">
               <span>Color Attribute</span>
-              <input type="text" placeholder="Red, BlackΓÇª" value={filterColor} onChange={(e) => setFilterColor(e.target.value)} />
+              <input type="text" placeholder="Red, Black..." value={filterColor} onChange={(e) => setFilterColor(e.target.value)} />
             </label>
           </div>
 
@@ -963,18 +1175,63 @@ export default function Dashboard() {
         <section className="metrics-grid" aria-label="Key metrics">
           <article className="metric-card">
             <p className="metric-label">Active Cameras</p>
-            <strong>{cameras.length ? activeCameras : 'ΓÇö'}</strong>
-            <span>{cameras.length ? `${cameras.length} total streams` : 'Loading camera inventory'}</span>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? `${cameras.length} total cameras` : 'No cameras configured'}</span>
           </article>
           <article className="metric-card">
-            <p className="metric-label">System Status</p>
+            <p className="metric-label">Offline Cameras</p>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? cameras.length - activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? 'Disabled streams' : 'No cameras configured'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Active Streams</p>
+            {cameras === null ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{cameras.length ? activeCameras : '-'}</strong>
+            )}
+            <span>{cameras === null ? <div className="skeleton skeleton-text short" /> : cameras.length ? 'Live HLS connections' : 'No cameras configured'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Open Alerts</p>
+            {!incidentsLoaded ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{recentAlerts}</strong>
+            )}
+            <span>{!incidentsLoaded ? <div className="skeleton skeleton-text short" /> : 'New & acknowledged'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Incidents Today</p>
+            {!incidentsLoaded ? (
+              <div className="skeleton skeleton-number" />
+            ) : (
+              <strong>{incidents.length}</strong>
+            )}
+            <span>{!incidentsLoaded ? <div className="skeleton skeleton-text short" /> : 'Total detections'}</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">System Health</p>
             <strong className="metric-accent">{systemStatus.label}</strong>
-            <span>Core services online</span>
+            <span>Core services operational</span>
           </article>
           <article className="metric-card">
-            <p className="metric-label">Recent Alerts</p>
-            <strong>{incidentsLoaded ? recentAlerts : 'ΓÇö'}</strong>
-            <span>Open incidents in queue</span>
+            <p className="metric-label">Storage Usage</p>
+            <strong>-</strong>
+            <span>Storage monitoring not configured</span>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">API Status</p>
+            <strong className="metric-accent">Online</strong>
+            <span>Backend connected</span>
           </article>
         </section>
 
@@ -993,18 +1250,31 @@ export default function Dashboard() {
                 <span className="status-pill warning">Active alarm</span>
                 <span className="subtle-chip">{selectedAlarmEvent ? `Event #${selectedAlarmEvent.eventId}` : 'No active event'}</span>
               </div>
-              <div className="alarm-map">
-                <div className="map-grid-line map-grid-x" />
-                <div className="map-grid-line map-grid-y" />
-                <div
-                  className="map-pin"
-                  style={{ left: `${Math.min(Math.max(((selectedAlarmGeo.lng - 15.94) / 0.06) * 100, 8), 92)}%`, top: `${Math.min(Math.max((1 - ((selectedAlarmGeo.lat - 45.80) / 0.03)) * 100, 10), 90)}%` }}
-                />
-                <div className="map-callout">
-                  <strong>{selectedAlarmGeo.label}</strong>
-                  <p>{selectedAlarmGeo.note}</p>
+              {selectedAlarmCamera && (selectedAlarmGeo.lat !== 0 || selectedAlarmGeo.lng !== 0) ? (
+                <div className="alarm-map">
+                  <div className="map-grid-line map-grid-x" />
+                  <div className="map-grid-line map-grid-y" />
+                  <div
+                    className="map-pin"
+                    style={{ left: `${Math.min(Math.max(((selectedAlarmGeo.lng - 15.94) / 0.06) * 100, 8), 92)}%`, top: `${Math.min(Math.max((1 - ((selectedAlarmGeo.lat - 45.80) / 0.03)) * 100, 10), 90)}%` }}
+                  />
+                  <div className="map-callout">
+                    <strong>{selectedAlarmGeo.label}</strong>
+                    <p>{selectedAlarmGeo.note}</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="alarm-map alarm-map-empty">
+                  <div className="empty-state-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#8ea3b8', marginBottom: '1rem' }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>No camera locations configured</p>
+                    <p style={{ color: '#6a7a8a', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>Add cameras with latitude/longitude coordinates to enable map view</p>
+                  </div>
+                </div>
+              )}
               <div className="alarm-location-list">
                 <div>
                   <span className="alarm-label">Exact location</span>
@@ -1134,7 +1404,7 @@ export default function Dashboard() {
                             onClick={() => { exportEvidence(event); setSelectedAlarmId(event.eventId); addAuditEntry(`Exported evidence package for Event #${event.eventId}`); }}
                             title="Download evidence package (JSON + video metadata)"
                           >
-                            Γ¼ç Export
+                            Export
                           </button>
                           <button
                             type="button"
@@ -1164,10 +1434,85 @@ export default function Dashboard() {
                 <p className="eyebrow">Camera matrix</p>
                 <h3>Streams</h3>
               </div>
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}
+              >
+                {showAddCam ? 'Cancel' : '+ Add Camera'}
+              </button>
             </div>
 
+            {camerasError && (
+              <p className="checkout-status checkout-status-error" role="alert">
+                Camera list failed to load: {camerasError}
+              </p>
+            )}
+
+            {showAddCam && (
+              <form className="add-cam-form" onSubmit={submitAddCamera}>
+                <label className="search-field">
+                  <span>Camera Name</span>
+                  <input
+                    value={addCamForm.name}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g. Back Yard"
+                    required
+                    autoFocus
+                  />
+                </label>
+                <label className="search-field">
+                  <span>RTSP Stream URL</span>
+                  <input
+                    value={addCamForm.rtsp_url}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, rtsp_url: e.target.value }))}
+                    placeholder="rtsp://your-camera-ip:554/stream"
+                    required
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Location (optional)</span>
+                  <input
+                    value={addCamForm.location}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="e.g. back_yard"
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Latitude (optional)</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={addCamForm.lat}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, lat: e.target.value }))}
+                    placeholder="e.g. 45.8154"
+                  />
+                </label>
+                <label className="search-field">
+                  <span>Longitude (optional)</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={addCamForm.lng}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, lng: e.target.value }))}
+                    placeholder="e.g. 15.9819"
+                  />
+                </label>
+                <div className="add-cam-actions">
+                  {addCamError && <p className="checkout-status checkout-status-error">{addCamError}</p>}
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={addCamSaving || !addCamForm.name.trim() || !addCamForm.rtsp_url.trim()}
+                  >
+                    {addCamSaving ? 'Saving...' : 'Add Camera'}
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="camera-list">
-              {cameras.length ? (
+              {cameras && cameras.length > 0 ? (
                 cameras.map((cam) => (
                   <article className="camera-card" key={cam.id}>
                     <div className="camera-card-header">
@@ -1180,17 +1525,32 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div className="camera-video-wrapper">
+                      {streamErrors[cam.id] && (
+                        <p className="checkout-status checkout-status-error" role="alert">
+                          {streamErrors[cam.id]}
+                        </p>
+                      )}
                       <video id={`video-${cam.id}`} controls muted playsInline className="camera-video" />
                     </div>
-                    {/* Talkdown control */}
+                    {/* Snapshot + talkdown controls */}
                     <div className="talkdown-row">
+                      <button
+                        type="button"
+                        className="talkdown-btn"
+                        onClick={() => takeSnapshot(cam.id)}
+                        disabled={snapshotStatus[cam.id] === 'capturing'}
+                      >
+                        {snapshotStatus[cam.id] === 'capturing' ? 'Capturing...' :
+                          snapshotStatus[cam.id] === 'success' ? 'Snapshot saved' :
+                          snapshotStatus[cam.id] === 'error' ? 'Snapshot failed' : 'Take Snapshot'}
+                      </button>
                       <button
                         type="button"
                         className={`talkdown-btn${talkdownActive === cam.id ? ' talkdown-active' : ''}`}
                         onClick={() => triggerTalkdown(cam.id)}
                         disabled={talkdownActive === cam.id}
                       >
-                        {talkdownActive === cam.id ? '≡ƒöè Warning ActiveΓÇª' : '≡ƒÄÖ Trigger Talkdown'}
+                        {talkdownActive === cam.id ? 'Warning Active...' : 'Trigger Talkdown'}
                       </button>
                       {talkdownActive === cam.id && (
                         <span className="talkdown-indicator" aria-live="polite">
@@ -1201,13 +1561,29 @@ export default function Dashboard() {
                   </article>
                 ))
               ) : (
-                <div className="empty-state">Loading camerasΓÇª</div>
+                <div className="empty-state">
+                  <div className="empty-state-content">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#8ea3b8', marginBottom: '1rem' }}>
+                      <path d="M23 7l-7 5 7 5V7z" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg>
+                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>No active streams connected</p>
+                    <button 
+                      className="ghost-button" 
+                      type="button"
+                      onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}
+                      style={{ marginTop: '1rem' }}
+                    >
+                      Add Camera
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </section>
         </section>
 
-        {/* ΓöÇΓöÇ Operator Audit Trail ΓöÇΓöÇ */}
+        {/* -- Operator Audit Trail -- */}
         <section className="dashboard-panel audit-panel" id="audit">
           <div className="panel-heading">
             <div><p className="eyebrow">Compliance &amp; traceability</p><h3>Operator Audit Trail</h3></div>
@@ -1223,7 +1599,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {auditLog.map((entry) => (
+                {(auditLog || []).map((entry) => (
                   <tr key={entry.id}>
                     <td><span className="audit-ts">{entry.ts}</span></td>
                     <td><span className="audit-user">{entry.user}</span></td>

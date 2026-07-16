@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background:
@@ -119,12 +119,17 @@ textarea {
   color: #c9d8e7;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
 }
 
 .sidebar-nav-item.active,
 .sidebar-nav-item:hover {
   border-color: rgba(0, 194, 255, 0.26);
   background: rgba(0, 194, 255, 0.08);
+  transform: translateX(2px);
 }
 
 .sidebar-footer {
@@ -159,6 +164,85 @@ textarea {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  gap: 0.5rem;
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  color: #dfe9f2;
+  font-size: 0.9rem;
+  width: 200px;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #8ea3b8;
+}
+
+.search-button {
+  background: transparent;
+  border: none;
+  color: #8ea3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-button:hover {
+  color: #00c2ff;
+}
+
+.icon-button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #dfe9f2;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  background: rgba(0, 194, 255, 0.1);
+  border-color: rgba(0, 194, 255, 0.3);
+  color: #00c2ff;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00c2ff, #00ffa3);
+  color: #06111c;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
 }
 
 .ghost-button,
@@ -167,11 +251,21 @@ textarea {
   border-radius: 999px;
   padding: 0.85rem 1.1rem;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .ghost-button {
   background: rgba(255, 255, 255, 0.04);
   color: #dfe9f2;
+}
+
+.ghost-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.ghost-button:active {
+  transform: translateY(0);
 }
 
 .primary-button {
@@ -180,9 +274,18 @@ textarea {
   font-weight: 700;
 }
 
+.primary-button:hover {
+  box-shadow: 0 4px 16px rgba(0, 194, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.primary-button:active {
+  transform: translateY(0);
+}
+
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -193,6 +296,12 @@ textarea {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .metric-label {
@@ -311,7 +420,7 @@ textarea {
   border-color: rgba(31, 201, 123, 0.28);
 }
 
-/* ΓöÇΓöÇ Phase 2: Smart Search panel ΓöÇΓöÇ */
+/* -- Phase 2: Smart Search panel -- */
 .search-panel {
   margin-bottom: 0;
 }
@@ -401,7 +510,7 @@ textarea {
   cursor: pointer;
 }
 
-/* ΓöÇΓöÇ Phase 3: Notification banner ΓöÇΓöÇ */
+/* -- Phase 3: Notification banner -- */
 .notif-stack {
   position: fixed;
   top: 1rem;
@@ -484,7 +593,7 @@ textarea {
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* ΓöÇΓöÇ Phase 3: Camera Onboarding Wizard ΓöÇΓöÇ */
+/* -- Phase 3: Camera Onboarding Wizard -- */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -561,7 +670,7 @@ textarea {
   line-height: 1.6;
 }
 
-/* ΓöÇΓöÇ Phase 3: Talkdown ΓöÇΓöÇ */
+/* -- Phase 3: Talkdown -- */
 .talkdown-row {
   display: flex;
   align-items: center;
@@ -612,7 +721,7 @@ textarea {
   animation: ls-pulse 1s ease-in-out infinite;
 }
 
-/* ΓöÇΓöÇ Phase 4: Subscription / Billing ΓöÇΓöÇ */
+/* -- Phase 4: Subscription / Billing -- */
 .billing-panel {
   border-color: rgba(0, 212, 255, 0.22);
   box-shadow: 0 0 32px rgba(0, 212, 255, 0.08), 0 24px 80px rgba(0, 0, 0, 0.28);
@@ -971,7 +1080,7 @@ textarea {
   width: 100%;
 }
 
-/* ΓöÇΓöÇ Phase 4: Audit Trail ΓöÇΓöÇ */
+/* -- Phase 4: Audit Trail -- */
 .audit-panel {
   margin-top: 0;
 }
@@ -992,7 +1101,92 @@ textarea {
   color: #85dfff;
 }
 
-/* ΓöÇΓöÇ Mobile: responsive additions ΓöÇΓöÇ */
+/* -- Setup Wizard Overlay -- */
+.setup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 20, 0.94);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.setup-modal {
+  background: linear-gradient(160deg, rgba(14, 18, 38, 0.97), rgba(5, 9, 22, 0.96));
+  border: 1px solid rgba(255, 100, 100, 0.35);
+  border-radius: 24px;
+  padding: 2.5rem 2.25rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.03) inset, 0 20px 80px rgba(0,0,0,.65), 0 0 60px rgba(255,80,80,.12);
+}
+
+.setup-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.setup-icon {
+  font-size: 1.6rem;
+  color: #ff8888;
+  text-shadow: 0 0 16px rgba(255, 80, 80, 0.5);
+}
+
+.setup-modal-header h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #ffd0d0;
+  margin: 0;
+}
+
+.setup-desc {
+  color: #8ab0c9;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+}
+
+.setup-fields {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.setup-save-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 0.85rem;
+}
+
+/* -- Inline Add Camera Form -- */
+.add-cam-form {
+  background: rgba(8, 14, 32, 0.9);
+  border: 1px solid rgba(80, 140, 255, 0.2);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.add-cam-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-self: end;
+}
+
+/* -- Mobile: responsive additions -- */
 @media (max-width: 720px) {
   .notif-stack {
     top: auto;
@@ -1497,6 +1691,58 @@ textarea {
   color: #8ea3b8;
 }
 
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.alarm-map-empty {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-text.short {
+  width: 60%;
+}
+
+.skeleton-text.medium {
+  width: 80%;
+}
+
+.skeleton-number {
+  height: 2rem;
+  width: 4rem;
+  margin-bottom: 0.5rem;
+}
+
 @media (max-width: 1100px) {
   .dashboard-shell {
     grid-template-columns: 1fr;
@@ -1508,19 +1754,57 @@ textarea {
     height: auto;
   }
 
-  .content-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar-actions {
+    gap: 0.5rem;
+  }
+
+  .search-input {
+    width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: 1fr;
   }
 
-  .login-shell {
-    grid-template-columns: 1fr;
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 1rem;
   }
 
-  .login-hero {
-    min-height: 420px;
-    padding-bottom: 0;
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .search-bar {
+    flex: 1;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ghost-button,
+  .primary-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .content-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
 }
 
