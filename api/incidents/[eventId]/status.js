@@ -13,30 +13,82 @@ module.exports = async (req, res) => {
   if (!auth) return; // response already sent (401/403/503)
 
   const { eventId } = req.query;
-  const { status } = req.body || {};
+  const { status, assigned_operator_id: assignedOperatorId, assign_to_self: assignToSelf } = req.body || {};
 
-  if (!status || !ALLOWED_STATUSES.includes(status)) {
+  if (status && !ALLOWED_STATUSES.includes(status)) {
     res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${ALLOWED_STATUSES.join(', ')}` });
+    return;
+  }
+  if (!status && assignedOperatorId === undefined && !assignToSelf) {
+    res.status(400).json({ success: false, error: 'Provide status, assigned_operator_id, or assign_to_self' });
     return;
   }
 
   try {
-    // Tenant check: only update incidents that belong to an event in the
-    // caller's own organization -- prevents an operator from one tenant
-    // from changing another tenant's incident by guessing eventId.
-    const eventCheck = await db.query('SELECT organization_id FROM events WHERE id = $1', [eventId]);
-    if (eventCheck.rows.length === 0 || eventCheck.rows[0].organization_id !== auth.organizationId) {
+    // Tenant check: only touch incidents that belong to the caller's
+    // own organization -- prevents cross-tenant access by guessing eventId.
+    const incidentResult = await db.query(
+      'SELECT id, organization_id, status FROM incidents WHERE event_id = $1',
+      [eventId],
+    );
+    if (incidentResult.rows.length === 0 || incidentResult.rows[0].organization_id !== auth.organizationId) {
       res.status(404).json({ success: false, error: 'Incident not found in your organization' });
       return;
     }
+    const incident = incidentResult.rows[0];
 
-    await db.query(
-      `UPDATE ai_detections
-       SET bounding_box = jsonb_set(COALESCE(bounding_box, '{}'), '{incident_status}', to_jsonb($1::text))
-       WHERE event_id = $2`,
-      [status, eventId],
-    );
-    res.status(200).json({ success: true, event_id: eventId, status });
+    // Only org_admin/platform_admin can assign an incident to someone
+    // else; an operator may only assign it to themselves (pick it up)
+    // or via assign_to_self.
+    let targetOperatorId;
+    if (assignToSelf) {
+      targetOperatorId = auth.userId;
+    } else if (assignedOperatorId !== undefined) {
+      if (assignedOperatorId !== null && assignedOperatorId !== auth.userId
+          && auth.userType !== 'org_admin' && auth.userType !== 'platform_admin') {
+        res.status(403).json({ success: false, error: 'Only org_admin/platform_admin can assign incidents to other operators' });
+        return;
+      }
+      targetOperatorId = assignedOperatorId;
+    }
+
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (status) {
+      updates.push(`status = $${paramIndex++}`);
+      values.push(status);
+      if (status === 'Acknowledged' && !incident.acknowledged_at) {
+        updates.push(`acknowledged_at = now()`);
+      }
+      if ((status === 'Resolved' || status === 'False Alarm')) {
+        updates.push(`resolved_at = now()`);
+      }
+    }
+    if (targetOperatorId !== undefined) {
+      updates.push(`assigned_operator_id = $${paramIndex++}`);
+      values.push(targetOperatorId);
+    }
+
+    values.push(incident.id);
+    await db.query(`UPDATE incidents SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
+
+    if (status) {
+      await db.query(
+        `INSERT INTO incident_activity_log (incident_id, user_id, action, note) VALUES ($1, $2, 'status_changed', $3)`,
+        [incident.id, auth.userId, `Status changed from ${incident.status} to ${status}`],
+      );
+    }
+    if (targetOperatorId !== undefined) {
+      await db.query(
+        `INSERT INTO incident_activity_log (incident_id, user_id, action, note) VALUES ($1, $2, $3, $4)`,
+        [incident.id, auth.userId, targetOperatorId ? 'assigned' : 'unassigned',
+          targetOperatorId ? `Assigned to operator ${targetOperatorId}` : 'Unassigned'],
+      );
+    }
+
+    res.status(200).json({ success: true, event_id: eventId, status: status || incident.status, assigned_operator_id: targetOperatorId });
   } catch (err) {
     console.error('PATCH /api/incidents/:eventId/status error:', err.message);
     res.status(500).json({ success: false, error: err.message });

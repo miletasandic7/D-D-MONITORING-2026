@@ -1,5 +1,5 @@
 const db = require('../../db/index');
-const { requireAuth } = require('../_auth');
+const { requireAuth, getAccessibleCameraIds } = require('../_auth');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 
@@ -13,35 +13,54 @@ module.exports = async (req, res) => {
   if (!auth) return; // response already sent (401/403/503)
 
   try {
-    const { rows } = await db.query(`
-      SELECT
-        a.id,
-        a.event_id,
-        a.object_type,
-        a.confidence,
-        COALESCE(a.bounding_box->>'incident_status', 'New') AS status,
-        a.timestamp,
-        e.camera_id,
-        e.severity,
-        e.description AS source_description
-      FROM ai_detections a
-      JOIN events e ON a.event_id = e.id
-      WHERE e.is_dismissed = FALSE
-        AND e.organization_id = $1
-      ORDER BY a.timestamp DESC
-      LIMIT 100
-    `, [auth.organizationId]);
+    const accessibleIds = await getAccessibleCameraIds(auth);
+    if (accessibleIds !== null && accessibleIds.length === 0) {
+      res.status(200).json({ success: true, count: 0, incidents: [], statuses: ALLOWED_STATUSES });
+      return;
+    }
+
+    const { rows } = accessibleIds === null
+      ? await db.query(`
+          SELECT
+            i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
+            i.created_at, i.acknowledged_at, i.resolved_at,
+            e.camera_id, e.description AS source_description,
+            a.object_type, a.confidence
+          FROM incidents i
+          JOIN events e ON e.id = i.event_id
+          LEFT JOIN ai_detections a ON a.event_id = e.id
+          WHERE e.is_dismissed = FALSE AND i.organization_id = $1
+          ORDER BY i.created_at DESC
+          LIMIT 100
+        `, [auth.organizationId])
+      : await db.query(`
+          SELECT
+            i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
+            i.created_at, i.acknowledged_at, i.resolved_at,
+            e.camera_id, e.description AS source_description,
+            a.object_type, a.confidence
+          FROM incidents i
+          JOIN events e ON e.id = i.event_id
+          LEFT JOIN ai_detections a ON a.event_id = e.id
+          WHERE e.is_dismissed = FALSE AND i.organization_id = $1 AND i.camera_id = ANY($2::varchar[])
+          ORDER BY i.created_at DESC
+          LIMIT 100
+        `, [auth.organizationId, accessibleIds]);
 
     const incidents = rows.map((row) => ({
+      id: row.id,
       event_id: row.event_id,
-      detection_id: row.id,
       object_type: row.object_type,
       confidence: row.confidence,
-      timestamp: row.timestamp,
+      timestamp: row.created_at,
       source: row.source_description || `Event #${row.event_id}`,
-      status: row.status || 'New',
+      status: row.status,
+      severity: row.severity,
+      assigned_operator_id: row.assigned_operator_id,
+      acknowledged_at: row.acknowledged_at,
+      resolved_at: row.resolved_at,
       camera_id: row.camera_id,
-      subtitle: `Confidence ${Math.round(Number(row.confidence) * 100)}%`,
+      subtitle: row.confidence != null ? `Confidence ${Math.round(Number(row.confidence) * 100)}%` : row.severity,
     }));
 
     res.status(200).json({ success: true, count: incidents.length, incidents, statuses: ALLOWED_STATUSES });
