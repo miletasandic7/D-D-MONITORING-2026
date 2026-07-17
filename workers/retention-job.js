@@ -12,6 +12,10 @@
  * than as a long-running process like the recording worker -- it does
  * one pass and exits, which fits Vercel Cron / any scheduler cleanly.
  *
+ * Uses queryAsPlatformAdmin (Phase 6 RLS bypass) throughout: retention
+ * applies across every organization's recordings, not one tenant's --
+ * a trusted background process, not a user-facing request.
+ *
  * Run with: node workers/retention-job.js
  * Required env: DATABASE_URL, STORAGE_* (see api/_storage.js)
  */
@@ -48,7 +52,7 @@ async function run() {
     process.exit(1);
   }
 
-  const expired = await db.query(
+  const expired = await db.queryAsPlatformAdmin(
     `SELECT id, storage_url FROM recordings
      WHERE status = 'completed' AND retention_expires_at IS NOT NULL AND retention_expires_at < now()`,
   );
@@ -66,7 +70,7 @@ async function run() {
       } else {
         console.warn(`[retention-job] recording ${row.id}: could not derive storage key from ${row.storage_url}, deleting DB row anyway`);
       }
-      await db.query('DELETE FROM recordings WHERE id = $1', [row.id]);
+      await db.queryAsPlatformAdmin('DELETE FROM recordings WHERE id = $1', [row.id]);
       deleted += 1;
     } catch (err) {
       console.error(`[retention-job] failed to delete recording ${row.id}:`, err.message);

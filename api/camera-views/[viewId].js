@@ -15,7 +15,8 @@ module.exports = async (req, res) => {
   try {
     // Ownership check baked into the WHERE clause: a caller can only
     // close their own view session, and only if it's still open.
-    const result = await db.query(
+    const result = await db.queryAsOrg(
+      auth.organizationId,
       `UPDATE camera_view_logs
        SET ended_at = now()
        WHERE id = $1 AND user_id = $2 AND ended_at IS NULL

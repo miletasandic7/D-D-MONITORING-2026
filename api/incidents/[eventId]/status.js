@@ -1,5 +1,6 @@
 const db = require('../../../db/index');
 const { requireAuth } = require('../../_auth');
+const { logAudit, getIp } = require('../../_audit');
 
 const ALLOWED_STATUSES = ['New', 'Acknowledged', 'In Progress', 'Resolved', 'False Alarm'];
 
@@ -26,8 +27,13 @@ module.exports = async (req, res) => {
 
   try {
     // Tenant check: only touch incidents that belong to the caller's
-    // own organization -- prevents cross-tenant access by guessing eventId.
-    const incidentResult = await db.query(
+    // own organization -- prevents cross-tenant access by guessing
+    // eventId. Runs via queryAsOrg (Phase 6 RLS) as a second layer on
+    // top of this app-level check: even if this WHERE clause somehow
+    // omitted the org filter, RLS would still only return this
+    // caller's own rows.
+    const incidentResult = await db.queryAsOrg(
+      auth.organizationId,
       'SELECT id, organization_id, status FROM incidents WHERE event_id = $1',
       [eventId],
     );
@@ -72,7 +78,7 @@ module.exports = async (req, res) => {
     }
 
     values.push(incident.id);
-    await db.query(`UPDATE incidents SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
+    await db.queryAsOrg(auth.organizationId, `UPDATE incidents SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
 
     if (status) {
       await db.query(
@@ -87,6 +93,16 @@ module.exports = async (req, res) => {
           targetOperatorId ? `Assigned to operator ${targetOperatorId}` : 'Unassigned'],
       );
     }
+
+    await logAudit({
+      organizationId: auth.organizationId,
+      userId: auth.userId,
+      action: 'incident.updated',
+      resourceType: 'incident',
+      resourceId: incident.id,
+      metadata: { event_id: eventId, status, assigned_operator_id: targetOperatorId },
+      ipAddress: getIp(req),
+    });
 
     res.status(200).json({ success: true, event_id: eventId, status: status || incident.status, assigned_operator_id: targetOperatorId });
   } catch (err) {

@@ -147,7 +147,8 @@ async function getAccessibleCameraIds(auth) {
     return null; // no extra filter -- organization_id scoping is enough
   }
 
-  const { rows } = await db.query(
+  const { rows } = await db.queryAsOrg(
+    auth.organizationId,
     `SELECT c.id
      FROM cameras c
      JOIN operator_assignments oa ON oa.site_id = c.site_id AND oa.active
@@ -162,7 +163,11 @@ async function getAccessibleCameraIds(auth) {
  * Used by endpoints that act on one camera_id (stream tokens, view logs).
  */
 async function canAccessCamera(auth, cameraId) {
-  const { rows } = await db.query('SELECT organization_id, site_id FROM cameras WHERE id = $1', [cameraId]);
+  // queryAsOrg (Phase 6 RLS): cameras has RLS enabled, so this only
+  // ever sees a row if it belongs to the caller's own organization --
+  // a camera from another org simply won't be returned, which the
+  // `rows.length === 0` check below already treats as "no access".
+  const { rows } = await db.queryAsOrg(auth.organizationId, 'SELECT organization_id, site_id FROM cameras WHERE id = $1', [cameraId]);
   if (rows.length === 0) return false;
   const camera = rows[0];
   if (camera.organization_id !== auth.organizationId) return false;

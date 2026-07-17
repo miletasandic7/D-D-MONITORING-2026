@@ -42,7 +42,8 @@ module.exports = async (req, res) => {
          VALUES ($1, $2, $3, $4) RETURNING id`,
         [cameraId, auth.userId, token, expiresAt],
       ),
-      db.query(
+      db.queryAsOrg(
+        auth.organizationId,
         `INSERT INTO camera_view_logs (camera_id, user_id, organization_id, ip_address)
          VALUES ($1, $2, $3, $4) RETURNING id, started_at`,
         [cameraId, auth.userId, auth.organizationId, ipAddress],

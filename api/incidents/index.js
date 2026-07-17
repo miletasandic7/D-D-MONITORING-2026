@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     }
 
     const { rows } = accessibleIds === null
-      ? await db.query(`
+      ? await db.queryAsOrg(auth.organizationId, `
           SELECT
             i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
             i.created_at, i.acknowledged_at, i.resolved_at,
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
           ORDER BY i.created_at DESC
           LIMIT 100
         `, [auth.organizationId])
-      : await db.query(`
+      : await db.queryAsOrg(auth.organizationId, `
           SELECT
             i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
             i.created_at, i.acknowledged_at, i.resolved_at,

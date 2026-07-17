@@ -1,4 +1,5 @@
 const db = require('../../db/index');
+const { requireAuth } = require('../_auth');
 
 function safeLower(value) {
   return String(value || '').toLowerCase();
@@ -15,10 +16,8 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!db.hasDatabase) {
-    res.status(503).json({ success: false, error: 'Database not configured. Set DATABASE_URL environment variable.' });
-    return;
-  }
+  const auth = await requireAuth(req, res);
+  if (!auth) return; // response already sent (401/403/503); this endpoint had NO auth before Phase 6 -- a real gap, closed here
 
   try {
     const {
@@ -33,8 +32,9 @@ module.exports = async (req, res) => {
 
     const minConf = toNumber(min_confidence, 0.5);
     const params = [minConf];
-    const conditions = ['a.confidence >= $1'];
-    let paramIdx = 2;
+    const conditions = ['a.confidence >= $1', 'e.organization_id = $2'];
+    params.push(auth.organizationId);
+    let paramIdx = 3;
 
     if (object_type) {
       conditions.push(`LOWER(a.object_type) LIKE $${paramIdx++}`);
@@ -92,7 +92,7 @@ module.exports = async (req, res) => {
       LIMIT 200
     `;
 
-    const { rows } = await db.query(sql, params);
+    const { rows } = await db.queryAsOrg(auth.organizationId, sql, params);
     const results = rows.map((row) => ({ ...row, attributes: row.attributes || [] }));
 
     res.status(200).json({ success: true, count: results.length, results });

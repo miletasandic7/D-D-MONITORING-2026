@@ -22,6 +22,11 @@
  *      mark the row completed (with retention_expires_at based on the
  *      camera's retention_days). On failure, mark it failed.
  *
+ * Uses queryAsPlatformAdmin (Phase 6 RLS bypass) throughout: this
+ * worker reacts to events from ANY organization's cameras, not one
+ * tenant's -- there is no single auth.organizationId to scope it to.
+ * It's a trusted background process, not a user-facing request.
+ *
  * Run with:  node workers/recording-worker.js
  * Required env: DATABASE_URL, STORAGE_* (see api/_storage.js), and
  * ffmpeg must be installed on the host.
@@ -63,7 +68,7 @@ async function handleEvent(payload) {
   const { camera_id: cameraId, event_id: eventId, organization_id: organizationId } = payload;
   console.log(`[recording-worker] event ${eventId} on camera ${cameraId} (org ${organizationId})`);
 
-  const cameraResult = await db.query(
+  const cameraResult = await db.queryAsPlatformAdmin(
     'SELECT rtsp_url, recording_mode, retention_days FROM cameras WHERE id = $1',
     [cameraId],
   );
@@ -82,7 +87,7 @@ async function handleEvent(payload) {
   }
 
   const startTime = new Date();
-  const recordingRow = await db.query(
+  const recordingRow = await db.queryAsPlatformAdmin(
     `INSERT INTO recordings (camera_id, organization_id, event_id, start_time, trigger_reason, status)
      VALUES ($1, $2, $3, $4, 'event', 'recording')
      RETURNING id`,
@@ -103,7 +108,7 @@ async function handleEvent(payload) {
     const endTime = new Date();
     const retentionExpiresAt = new Date(endTime.getTime() + camera.retention_days * 24 * 60 * 60 * 1000);
 
-    await db.query(
+    await db.queryAsPlatformAdmin(
       `UPDATE recordings
        SET status = 'completed', end_time = $2, duration_seconds = $3,
            size_bytes = $4, storage_url = $5, retention_expires_at = $6
@@ -113,7 +118,7 @@ async function handleEvent(payload) {
     console.log(`[recording-worker] recording ${recordingId} completed (${stats.size} bytes) -> ${storageUrl}`);
   } catch (err) {
     console.error(`[recording-worker] recording ${recordingId} failed:`, err.message);
-    await db.query(`UPDATE recordings SET status = 'failed', end_time = now() WHERE id = $1`, [recordingId]);
+    await db.queryAsPlatformAdmin(`UPDATE recordings SET status = 'failed', end_time = now() WHERE id = $1`, [recordingId]);
   } finally {
     fs.promises.unlink(tempFile).catch(() => {});
   }

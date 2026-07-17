@@ -13,7 +13,8 @@ module.exports = async (req, res) => {
   const { eventId } = req.query;
 
   try {
-    const incidentResult = await db.query(
+    const incidentResult = await db.queryAsOrg(
+      auth.organizationId,
       'SELECT id, organization_id FROM incidents WHERE event_id = $1',
       [eventId],
     );

@@ -1,6 +1,7 @@
 const db = require('../../db/index');
 const { requireAuth } = require('../_auth');
 const { generateHeartbeatSecret, HEARTBEAT_FRESHNESS_SECONDS } = require('../_media_nodes');
+const { logPlatformAudit, getIp } = require('../_audit');
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
@@ -10,7 +11,7 @@ module.exports = async (req, res) => {
     if (!auth) return;
 
     try {
-      const { rows } = await db.query(`
+      const { rows } = await db.queryAsPlatformAdmin(`
         SELECT
           n.id, n.region, n.hostname, n.public_hls_url, n.capacity,
           n.last_heartbeat_at,
@@ -49,6 +50,14 @@ module.exports = async (req, res) => {
       );
       // heartbeat_secret is only ever returned once, at creation time --
       // it's not retrievable afterwards (same principle as an API key).
+      await logPlatformAudit({
+        userId: auth.userId,
+        action: 'media_node.create',
+        resourceType: 'media_node',
+        resourceId: inserted.rows[0].id,
+        metadata: { region, hostname },
+        ipAddress: getIp(req),
+      });
       res.status(201).json({ success: true, node: inserted.rows[0], heartbeat_secret: heartbeatSecret });
     } catch (err) {
       console.error('POST /api/media-nodes error:', err.message);

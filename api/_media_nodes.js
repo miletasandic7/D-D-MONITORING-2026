@@ -16,7 +16,11 @@ const HEARTBEAT_FRESHNESS_SECONDS = parseInt(process.env.MEDIA_NODE_HEARTBEAT_FR
  * VITE_HLS_BASE_URL directly instead of using this registry.
  */
 async function pickMediaNodeForCamera({ preferredRegion } = {}) {
-  const { rows } = await db.query(
+  // queryAsPlatformAdmin (RLS bypass): capacity math needs the TRUE
+  // camera count per node across every organization sharing it, not
+  // just one tenant's cameras -- a tenant-scoped query would
+  // undercount and could overload a node that looks falsely empty.
+  const { rows } = await db.queryAsPlatformAdmin(
     `SELECT
        n.id, n.region, n.public_hls_url, n.capacity,
        count(c.id)::int AS current_cameras,

@@ -1,6 +1,7 @@
 const db = require('../db/index');
 const { requireAuth, canAccessCamera } = require('./_auth');
 const { uploadObject } = require('./_storage');
+const { logAudit, getIp } = require('./_audit');
 
 // Reasonable upper bound for a single JPEG frame capture -- protects
 // against a misbehaving client posting something huge.
@@ -49,12 +50,23 @@ module.exports = async (req, res) => {
 
     const storageUrl = await uploadObject({ key, body: buffer, contentType: 'image/jpeg' });
 
-    const inserted = await db.query(
+    const inserted = await db.queryAsOrg(
+      auth.organizationId,
       `INSERT INTO snapshots (camera_id, organization_id, taken_by_user_id, taken_at, storage_url, trigger, file_size_bytes)
        VALUES ($1, $2, $3, $4, $5, 'manual', $6)
        RETURNING id, taken_at, storage_url`,
       [cameraId, auth.organizationId, auth.userId, takenAt, storageUrl, buffer.length],
     );
+
+    await logAudit({
+      organizationId: auth.organizationId,
+      userId: auth.userId,
+      action: 'snapshot.captured',
+      resourceType: 'snapshot',
+      resourceId: inserted.rows[0].id,
+      metadata: { camera_id: cameraId },
+      ipAddress: getIp(req),
+    });
 
     res.status(201).json({ success: true, snapshot: inserted.rows[0] });
   } catch (err) {
