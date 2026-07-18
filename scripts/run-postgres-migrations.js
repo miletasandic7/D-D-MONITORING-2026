@@ -51,6 +51,10 @@ async function main() {
       }
 
       console.log(`[migrate:postgres] Running ${relativePath}`);
+      // Migration files in this repository intentionally contain
+      // multi-statement SQL (BEGIN/COMMIT, DO $$...$$ blocks, etc.), so
+      // they must be sent in simple query mode as a single trusted blob
+      // read from disk rather than split on semicolons.
       await client.query({ text: sql, queryMode: 'simple' });
     }
 

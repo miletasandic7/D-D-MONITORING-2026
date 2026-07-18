@@ -8,6 +8,7 @@ try {
 
 const deployBaseUrl = (process.argv[2] || process.env.DEPLOY_BASE_URL || '').trim().replace(/\/+$/, '');
 const bearerToken = (process.env.SMOKE_BEARER_TOKEN || '').trim();
+const bearerPrefix = 'Bearer ';
 
 if (!deployBaseUrl) {
   console.error('[smoke:deploy] Pass the deploy base URL as argv[2] or DEPLOY_BASE_URL');
@@ -15,7 +16,7 @@ if (!deployBaseUrl) {
 }
 
 async function requestJson(pathname, { requireSuccess = false, authOptional = false } = {}) {
-  const headers = bearerToken ? { Authorization: ['Be', 'arer ', bearerToken].join('') } : {};
+  const headers = bearerToken ? { Authorization: `${bearerPrefix}${bearerToken}` } : {};
   const response = await fetch(`${deployBaseUrl}${pathname}`, {
     headers,
   });
