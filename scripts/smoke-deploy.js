@@ -15,7 +15,7 @@ if (!deployBaseUrl) {
   process.exit(1);
 }
 
-async function requestJson(pathname, { requireSuccess = false, authOptional = false } = {}) {
+async function requestJson(pathname, { requireSuccess = false, allowAuthFailure = false } = {}) {
   const headers = bearerToken ? { Authorization: `${bearerPrefix}${bearerToken}` } : {};
   const response = await fetch(`${deployBaseUrl}${pathname}`, {
     headers,
@@ -37,11 +37,11 @@ async function requestJson(pathname, { requireSuccess = false, authOptional = fa
     throw new Error(`${pathname} did not report success: status=${response.status} body=${JSON.stringify(body)}`);
   }
 
-  if (authOptional && !bearerToken && ![200, 401, 403].includes(response.status)) {
+  if (allowAuthFailure && !bearerToken && ![200, 401, 403].includes(response.status)) {
     throw new Error(`${pathname} returned unexpected status without token: ${response.status}`);
   }
 
-  if (authOptional && bearerToken && response.status !== 200) {
+  if (allowAuthFailure && bearerToken && response.status !== 200) {
     throw new Error(`${pathname} returned ${response.status} even though SMOKE_BEARER_TOKEN was provided`);
   }
 
@@ -52,8 +52,8 @@ async function requestJson(pathname, { requireSuccess = false, authOptional = fa
 (async () => {
   try {
     await requestJson('/api/health', { requireSuccess: true });
-    await requestJson('/api/cameras', { authOptional: true });
-    await requestJson('/api/incidents', { authOptional: true });
+    await requestJson('/api/cameras', { allowAuthFailure: true });
+    await requestJson('/api/incidents', { allowAuthFailure: true });
     console.log('[smoke:deploy] Deployment smoke test passed.');
   } catch (error) {
     console.error('[smoke:deploy] Failed:', error.message);
