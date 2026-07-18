@@ -30,7 +30,7 @@ export async function getSupabaseClient() {
       // Clear stale localStorage data
       localStorage.removeItem('supabase.auth.token');
     }
-  } catch (e) {
+  } catch {
     // Clear any corrupted session data
     localStorage.removeItem('supabase.auth.token');
   }

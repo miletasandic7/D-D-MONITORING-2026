@@ -139,7 +139,7 @@ async function main() {
     let payload;
     try {
       payload = JSON.parse(msg.payload);
-    } catch (e) {
+    } catch {
       console.error('[recording-worker] could not parse notification payload:', msg.payload);
       return;
     }

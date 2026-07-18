@@ -24,7 +24,7 @@ api.interceptors.request.use(async (config) => {
         config.headers.Authorization = `Bearer ${session.access_token}`;
       }
     }
-  } catch (e) {
+  } catch {
     // Let the request go out without a token; the backend will
     // respond with 401 and the UI's existing error handling covers it.
   }

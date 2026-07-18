@@ -40,7 +40,7 @@ async function verifyToken(req) {
     // needs to switch to JWKS-based verification -- out of scope for
     // this phase, noted in the roadmap.
     payload = jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ['HS256'] });
-  } catch (e) {
+  } catch {
     const err = new Error('Invalid or expired token');
     err.statusCode = 401;
     throw err;

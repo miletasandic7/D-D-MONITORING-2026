@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
 
     const ipAddress = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim() || null;
 
-    const [tokenResult, viewLogResult] = await Promise.all([
+    const [, viewLogResult] = await Promise.all([
       db.query(
         `INSERT INTO camera_stream_tokens (camera_id, user_id, token, expires_at)
          VALUES ($1, $2, $3, $4) RETURNING id`,

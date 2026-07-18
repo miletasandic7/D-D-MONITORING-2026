@@ -19,7 +19,7 @@
  * Run with: node workers/media-node-heartbeat.js
  */
 
-try { require('dotenv').config(); } catch (e) { /* optional */ }
+try { require('dotenv').config(); } catch { /* optional */ }
 
 const https = require('https');
 const http = require('http');

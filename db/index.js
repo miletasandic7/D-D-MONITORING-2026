@@ -1,13 +1,13 @@
 let Pool;
 try {
   Pool = require('pg').Pool;
-} catch (e) {
+} catch {
   Pool = null;
 }
 
 try {
   require('dotenv').config();
-} catch (e) {
+} catch {
   // dotenv not available, env vars come from host
 }
 

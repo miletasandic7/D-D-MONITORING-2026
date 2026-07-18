@@ -15,7 +15,7 @@
  * another terminal gives a fully working local stack.
  */
 
-try { require('dotenv').config(); } catch (e) { /* optional */ }
+try { require('dotenv').config(); } catch { /* optional */ }
 
 const http = require('http');
 const path = require('path');
@@ -85,7 +85,7 @@ function readBody(req) {
     req.on('end', () => {
       if (!data) { resolve({}); return; }
       try { resolve(JSON.parse(data)); }
-      catch (e) { resolve({}); } // non-JSON body, leave empty like Vercel would for a bad content-type
+      catch { resolve({}); } // non-JSON body, leave empty like Vercel would for a bad content-type
     });
     req.on('error', reject);
   });
