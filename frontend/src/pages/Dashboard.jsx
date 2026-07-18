@@ -450,7 +450,8 @@ export default function Dashboard() {
           },
           onApprove: async (data) => {
             setPaypalMounting(true);
-            const response = await api.post(`/paypal/orders/${data.orderID}/capture`, {
+            const response = await api.post('/paypal', {
+              orderId: data.orderID,
               planId: selectedPlan.id,
             });
 
@@ -651,7 +652,7 @@ export default function Dashboard() {
 
     const closeViewLog = (viewLogId) => {
       if (!viewLogId) return;
-      api.patch(`/camera-views/${viewLogId}`).catch(() => {
+      api.patch(`/camera-views?viewId=${encodeURIComponent(viewLogId)}`).catch(() => {
         // Best-effort: if this fails (e.g. network drop on tab close),
         // the view log simply stays open with no ended_at. Not fatal --
         // it just means that session's duration won't show as closed.
