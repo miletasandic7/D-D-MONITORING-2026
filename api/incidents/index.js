@@ -52,7 +52,7 @@ module.exports = async (req, res) => {
             FROM incidents i
             JOIN events e ON e.id = i.event_id
             LEFT JOIN ai_detections a ON a.event_id = e.id
-            WHERE e.is_dismissed = FALSE AND i.organization_id = $1 AND e.camera_id = ANY($2::varchar[])
+            WHERE e.is_dismissed = FALSE AND i.organization_id = $1 AND i.camera_id = ANY($2::varchar[])
             ORDER BY i.id, a.confidence DESC NULLS LAST
           ) deduped
           ORDER BY created_at DESC

@@ -43,6 +43,20 @@ function getClient() {
 }
 
 /**
+ * Returns the public URL base string for this deployment, or null if
+ * neither STORAGE_PUBLIC_BASE_URL nor STORAGE_ENDPOINT is configured.
+ */
+function getStoragePublicBase() {
+  if (process.env.STORAGE_PUBLIC_BASE_URL) {
+    return process.env.STORAGE_PUBLIC_BASE_URL.replace(/\/$/, '');
+  }
+  if (process.env.STORAGE_ENDPOINT) {
+    return `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`.replace(/\/$/, '');
+  }
+  return null;
+}
+
+/**
  * Uploads a buffer to object storage under the given key and returns
  * the public URL to store in the DB (snapshots.storage_url /
  * recordings.storage_url).
@@ -62,15 +76,13 @@ async function uploadObject({ key, body, contentType }) {
     ContentType: contentType,
   }));
 
-  const base = process.env.STORAGE_PUBLIC_BASE_URL || process.env.STORAGE_ENDPOINT
-    ? (process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`)
-    : null;
+  const base = getStoragePublicBase();
   if (!base) {
     const err = new Error('Object storage public URL is not configured. Set STORAGE_PUBLIC_BASE_URL (or STORAGE_ENDPOINT).');
     err.statusCode = 503;
     throw err;
   }
-  return `${base.replace(/\/$/, '')}/${key}`;
+  return `${base}/${key}`;
 }
 
 /**
@@ -80,11 +92,11 @@ async function uploadObject({ key, body, contentType }) {
  * workers/retention-job.js).
  */
 function keyFromPublicUrl(storageUrl) {
-  const base = (process.env.STORAGE_PUBLIC_BASE_URL || (process.env.STORAGE_ENDPOINT ? `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}` : null) || '').replace(/\/$/, '');
-  if (storageUrl && storageUrl.startsWith(base)) {
-    return storageUrl.slice(base.length + 1);
+  const base = getStoragePublicBase();
+  if (!base || !storageUrl || !storageUrl.startsWith(base)) {
+    return null;
   }
-  return null;
+  return storageUrl.slice(base.length + 1);
 }
 
 /**
