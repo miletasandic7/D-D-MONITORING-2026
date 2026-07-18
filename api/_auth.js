@@ -121,12 +121,14 @@ async function syncUserProfile({ authUserId, email }) {
 
   // First login: create the profile as org_admin on the default org.
   const organizationId = await getDefaultOrganizationId();
+  
+  // Insert with all required columns
   const inserted = await db.query(
-    `INSERT INTO users (id, organization_id, email, user_type, status, last_login_at)
-     VALUES ($1, $2, $3, 'org_admin', 'active', now())
+    `INSERT INTO users (id, name, email, emailVerified, createdAt, updatedAt, organization_id, user_type, status, last_login_at)
+     VALUES ($1, $2, $2, true, now(), now(), $3, 'org_admin', 'active', now())
      ON CONFLICT (id) DO UPDATE SET last_login_at = now()
      RETURNING id, organization_id, user_type, status`,
-    [authUserId, organizationId, email],
+    [authUserId, email, organizationId],
   );
   return inserted.rows[0];
 }
