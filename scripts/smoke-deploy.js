@@ -34,10 +34,6 @@ async function requestJson(pathname, { requireSuccess = false, allowAuthFailure 
     body = text;
   }
 
-  if (response.status === 503) {
-    throw new Error(`${pathname} returned 503: ${JSON.stringify(body)}`);
-  }
-
   if (requireSuccess && (!response.ok || !body || body.success !== true)) {
     throw new Error(`${pathname} did not report success: status=${response.status} body=${JSON.stringify(body)}`);
   }

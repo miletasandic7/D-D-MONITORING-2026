@@ -36,6 +36,7 @@ async function main() {
   });
 
   const files = getMigrationFiles();
+  let failed = false;
 
   try {
     await client.connect();
@@ -61,11 +62,18 @@ async function main() {
     console.log('[migrate:postgres] All migrations applied successfully.');
   } catch (error) {
     console.error('[migrate:postgres] Migration failed:', error.message);
-    process.exitCode = 1;
-  } finally {
-    await client.end().catch((error) => {
-      console.warn('[migrate:postgres] Failed to close DB connection cleanly:', error.message);
-    });
+    failed = true;
+  }
+
+  try {
+    await client.end();
+  } catch (error) {
+    console.warn('[migrate:postgres] Failed to close DB connection cleanly:', error.message);
+    failed = true;
+  }
+
+  if (failed) {
+    process.exit(1);
   }
 }
 
