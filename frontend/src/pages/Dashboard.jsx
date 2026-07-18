@@ -166,6 +166,8 @@ export default function Dashboard() {
   const [filterZone, setFilterZone] = useState('');
   const [filterDirection, setFilterDirection] = useState('');
   const [filterDwellMin, setFilterDwellMin] = useState('');
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
   const [filterObjectType, setFilterObjectType] = useState('');
   const [filterColor, setFilterColor] = useState('');
 
@@ -544,6 +546,10 @@ export default function Dashboard() {
     });
 
   const activeCameras = cameras ? cameras.filter((camera) => camera.enabled !== false).length : 0;
+  const globalSearchNeedle = globalSearchTerm.trim().toLowerCase();
+  const visibleCameras = cameras && globalSearchNeedle
+    ? cameras.filter((cam) => [cam.name, cam.location, cam.id].some((field) => (field || '').toLowerCase().includes(globalSearchNeedle)))
+    : cameras;
   const recentAlerts = filteredIncidents.filter((incident) => ['New', 'Acknowledged', 'In Progress'].includes(incident.status)).length;
 
   const recentEvents = filteredIncidents.slice(0, 20).map((item) => ({
@@ -704,10 +710,25 @@ export default function Dashboard() {
     };
   }, [cameras, authChecked]);
 
-  // Evidence export: build a metadata JSON + simulated MP4 download
-  const exportEvidence = (event) => {
+  // Evidence export: fetches the real recordings/snapshots for this
+  // event (Phase 3 storage) and bundles them with metadata into a
+  // downloadable JSON -- previously this only wrote a placeholder
+  // note ("Clip URL will be populated once storage is connected")
+  // even though storage has been wired up since Phase 3.
+  const exportEvidence = async (event) => {
+    let evidence = { recordings: [], snapshots: [], storage_configured: false };
+    try {
+      const res = await api.get(`/incidents/${event.eventId}/evidence`);
+      evidence = res.data;
+    } catch (err) {
+      // Fall through with empty evidence rather than blocking the
+      // export entirely -- the metadata below is still useful even
+      // if the evidence lookup failed (e.g. storage not configured).
+      console.error('Failed to fetch evidence for export:', err.message);
+    }
+
     const metadata = {
-      export_version: '1.0',
+      export_version: '2.0',
       exported_at: new Date().toISOString(),
       incident: {
         event_id: event.eventId,
@@ -721,10 +742,11 @@ export default function Dashboard() {
         source: event.source,
         timestamp: event.time,
       },
-      video_clip: {
-        filename: `evidence_event_${event.eventId}_${Date.now()}.mp4`,
-        note: 'Clip URL will be populated from your video archive once storage is connected.',
-      },
+      recordings: evidence.recordings || [],
+      snapshots: evidence.snapshots || [],
+      note: evidence.storage_configured
+        ? 'download_url links expire 1 hour after this export was generated.'
+        : 'Object storage is not configured on this deployment, so no recordings/snapshots could be attached.',
     };
 
     const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
@@ -918,7 +940,13 @@ export default function Dashboard() {
           </div>
           <div className="topbar-actions">
             <div className="search-bar">
-              <input type="text" placeholder="Global search..." className="search-input" />
+              <input
+                type="text"
+                placeholder="Global search..."
+                className="search-input"
+                value={globalSearchTerm}
+                onChange={(e) => setGlobalSearchTerm(e.target.value)}
+              />
               <button className="search-button" aria-label="Search">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="8" />
@@ -926,12 +954,36 @@ export default function Dashboard() {
                 </svg>
               </button>
             </div>
-            <button className="icon-button" aria-label="Notifications">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
+            <div className="notifications-wrapper" style={{ position: 'relative' }}>
+              <button
+                className="icon-button"
+                aria-label="Notifications"
+                onClick={() => setShowNotifications((v) => !v)}
+                style={{ position: 'relative' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {incidents.filter((i) => i.status === 'New').length > 0 && (
+                  <span className="notification-badge">{incidents.filter((i) => i.status === 'New').length}</span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="notifications-panel" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 20, background: '#0d1b2a', border: '1px solid #1f3a52', borderRadius: '8px', padding: '0.75rem', minWidth: '260px', maxHeight: '320px', overflowY: 'auto' }}>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#8ea3b8' }}>New incidents</p>
+                  {incidents.filter((i) => i.status === 'New').length === 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#8ea3b8' }}>Nothing new right now.</p>
+                  ) : (
+                    incidents.filter((i) => i.status === 'New').map((i) => (
+                      <div key={i.event_id} style={{ padding: '0.4rem 0', borderBottom: '1px solid #16293b', fontSize: '0.85rem' }}>
+                        <strong>{i.camera_id}</strong> — {i.source || i.subtitle || 'Incident'}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <button className="icon-button" aria-label="Settings" onClick={() => setShowBilling(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
@@ -1517,8 +1569,8 @@ export default function Dashboard() {
             )}
 
             <div className="camera-list">
-              {cameras && cameras.length > 0 ? (
-                cameras.map((cam) => (
+              {visibleCameras && visibleCameras.length > 0 ? (
+                visibleCameras.map((cam) => (
                   <article className="camera-card" key={cam.id}>
                     <div className="camera-card-header">
                       <div>
@@ -1572,7 +1624,10 @@ export default function Dashboard() {
                       <path d="M23 7l-7 5 7 5V7z" />
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
-                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>No active streams connected</p>
+                    <p style={{ color: '#8ea3b8', fontSize: '0.95rem', margin: 0 }}>
+                      {globalSearchNeedle ? `No cameras match "${globalSearchTerm}"` : 'No active streams connected'}
+                    </p>
+                    {!globalSearchNeedle && (
                     <button 
                       className="ghost-button" 
                       type="button"
@@ -1581,6 +1636,7 @@ export default function Dashboard() {
                     >
                       Add Camera
                     </button>
+                    )}
                   </div>
                 </div>
               )}

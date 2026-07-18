@@ -1,4 +1,5 @@
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 /**
  * Object storage for snapshots and recordings (Phase 3).
@@ -65,4 +66,35 @@ async function uploadObject({ key, body, contentType }) {
   return `${base.replace(/\/$/, '')}/${key}`;
 }
 
-module.exports = { isConfigured, uploadObject };
+/**
+ * Recovers the object storage key from a public URL previously built
+ * by uploadObject() (base + '/' + key). Used wherever we need to act
+ * on the object again later (presigned downloads, deletion in
+ * workers/retention-job.js).
+ */
+function keyFromPublicUrl(storageUrl) {
+  const base = (process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`).replace(/\/$/, '');
+  if (storageUrl && storageUrl.startsWith(base)) {
+    return storageUrl.slice(base.length + 1);
+  }
+  return null;
+}
+
+/**
+ * Generates a short-lived, signed download URL for an object -- used
+ * for evidence export links instead of handing out the bucket's
+ * (possibly public) direct URL, so exported evidence links expire
+ * rather than staying valid forever.
+ */
+async function getPresignedDownloadUrl(key, { expiresInSeconds = 3600 } = {}) {
+  if (!isConfigured()) {
+    const err = new Error('Object storage is not configured. Set STORAGE_BUCKET, STORAGE_ACCESS_KEY_ID, STORAGE_SECRET_ACCESS_KEY.');
+    err.statusCode = 503;
+    throw err;
+  }
+  const client = getClient();
+  const command = new GetObjectCommand({ Bucket: process.env.STORAGE_BUCKET, Key: key });
+  return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+}
+
+module.exports = { isConfigured, uploadObject, keyFromPublicUrl, getPresignedDownloadUrl };

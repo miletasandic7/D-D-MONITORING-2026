@@ -22,16 +22,7 @@
 
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const db = require('../db/index');
-
-function keyFromStorageUrl(storageUrl) {
-  // storage_url is built as `${base}/${key}` in api/_storage.js -- the
-  // key is everything after the bucket segment of the base URL.
-  const base = (process.env.STORAGE_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-  if (base && storageUrl.startsWith(base)) {
-    return storageUrl.slice(base.length + 1);
-  }
-  return null;
-}
+const { keyFromPublicUrl } = require('../api/_storage');
 
 async function deleteFromStorage(key) {
   const client = new S3Client({
@@ -64,7 +55,7 @@ async function run() {
 
   for (const row of expired.rows) {
     try {
-      const key = row.storage_url ? keyFromStorageUrl(row.storage_url) : null;
+      const key = row.storage_url ? keyFromPublicUrl(row.storage_url) : null;
       if (key) {
         await deleteFromStorage(key);
       } else {
