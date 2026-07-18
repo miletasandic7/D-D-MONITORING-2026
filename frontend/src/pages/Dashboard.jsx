@@ -192,6 +192,12 @@ export default function Dashboard() {
   });
   const [addCamSaving, setAddCamSaving] = useState(false);
   const [addCamError, setAddCamError] = useState('');
+  const [showCreateIncident, setShowCreateIncident] = useState(false);
+  const [createIncidentCamera, setCreateIncidentCamera] = useState('');
+  const [createIncidentSeverity, setCreateIncidentSeverity] = useState('Medium');
+  const [createIncidentNotes, setCreateIncidentNotes] = useState('');
+  const [createIncidentSaving, setCreateIncidentSaving] = useState(false);
+  const [createIncidentError, setCreateIncidentError] = useState('');
 
   // Audio alarm incident count tracker
   const prevNewIncidentsRef = useRef(null);
@@ -335,16 +341,42 @@ export default function Dashboard() {
     try {
       await api.post('/cameras', newCam);
       setCameras((prev) => [...(prev || []), newCam]);
-      // Generate new ID for next camera
-      const timestamp = Date.now().toString(36);
-      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-      setAddCamForm({ id: `CAM-${timestamp}${randomPart}`, name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+      // Generate new ID for next camera using UUID
+      const newId = crypto.randomUUID().substring(0, 8).toUpperCase();
+      setAddCamForm({ id: `CAM-${newId}`, name: '', rtsp_url: '', location: '', lat: '', lng: '' });
       setShowAddCam(false);
       addAuditEntry(`Added camera: ${newCam.name} (${id})`);
     } catch (err) {
       setAddCamError(err?.response?.data?.error || err.message || 'Failed to save camera.');
     } finally {
       setAddCamSaving(false);
+    }
+  };
+
+  const submitCreateIncident = async (e) => {
+    e.preventDefault();
+    if (!createIncidentCamera) return;
+
+    setCreateIncidentSaving(true);
+    setCreateIncidentError('');
+    try {
+      const res = await api.post('/incidents/manual', {
+        camera_id: createIncidentCamera,
+        severity: createIncidentSeverity,
+        notes: createIncidentNotes,
+      });
+      // Refresh incidents list
+      const incidentsRes = await api.get('/incidents');
+      setIncidents(incidentsRes.data.incidents || []);
+      setShowCreateIncident(false);
+      setCreateIncidentCamera('');
+      setCreateIncidentSeverity('Medium');
+      setCreateIncidentNotes('');
+      addAuditEntry(`Manually created incident for camera ${createIncidentCamera}`);
+    } catch (err) {
+      setCreateIncidentError(err?.response?.data?.error || err.message || 'Failed to create incident');
+    } finally {
+      setCreateIncidentSaving(false);
     }
   };
 
@@ -1016,7 +1048,7 @@ export default function Dashboard() {
             <button className="primary-button" onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}>
               + Add Camera
             </button>
-            <button className="ghost-button" onClick={() => { document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' }); }}>
+            <button className="ghost-button" onClick={() => { setCreateIncidentCamera(cameras?.[0]?.id || ''); setShowCreateIncident(true); setCreateIncidentError(''); }}>
               + Create Incident
             </button>
           </div>
@@ -1417,6 +1449,64 @@ export default function Dashboard() {
         </section>
 
         <section className="content-grid">
+          {/* -- Create Incident Modal -- */}
+          {showCreateIncident && (
+            <div className="modal-overlay" onClick={() => setShowCreateIncident(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Create Manual Incident</h3>
+                  <button type="button" className="notif-dismiss" onClick={() => setShowCreateIncident(false)}>&#x2715;</button>
+                </div>
+                <form className="create-incident-form" onSubmit={submitCreateIncident}>
+                  <label className="search-field">
+                    <span>Camera</span>
+                    <select
+                      value={createIncidentCamera}
+                      onChange={(e) => setCreateIncidentCamera(e.target.value)}
+                      required
+                    >
+                      <option value="">Select a camera...</option>
+                      {(cameras || []).map((cam) => (
+                        <option key={cam.id} value={cam.id}>{cam.name || cam.id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="search-field">
+                    <span>Severity</span>
+                    <select
+                      value={createIncidentSeverity}
+                      onChange={(e) => setCreateIncidentSeverity(e.target.value)}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </label>
+                  <label className="search-field">
+                    <span>Notes (optional)</span>
+                    <textarea
+                      value={createIncidentNotes}
+                      onChange={(e) => setCreateIncidentNotes(e.target.value)}
+                      placeholder="Describe the incident..."
+                      rows={3}
+                    />
+                  </label>
+                  {createIncidentError && <p className="checkout-status checkout-status-error">{createIncidentError}</p>}
+                  <div className="modal-actions">
+                    <button type="button" className="ghost-button" onClick={() => setShowCreateIncident(false)}>Cancel</button>
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={createIncidentSaving || !createIncidentCamera}
+                    >
+                      {createIncidentSaving ? 'Creating...' : 'Create Incident'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           <section className="dashboard-panel table-panel" id="events">
             <div className="panel-heading">
               <div>

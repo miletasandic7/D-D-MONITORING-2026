@@ -262,5 +262,80 @@ module.exports = async (req, res) => {
     return handlePatchStatus(req, res);
   }
 
+  if (req.method === 'POST' && url.includes('/manual')) {
+    return handlePostManualIncident(req, res);
+  }
+
   res.status(405).json({ success: false, error: 'Method Not Allowed' });
 };
+
+// POST /api/incidents/manual - manually create an incident
+async function handlePostManualIncident(req, res) {
+  const auth = await requireAuth(req, res, { roles: ['platform_admin', 'org_admin'] });
+  if (!auth) return;
+
+  const { camera_id, severity = 'Medium', notes = '' } = req.body || {};
+  if (!camera_id) {
+    res.status(400).json({ success: false, error: 'camera_id is required' });
+    return;
+  }
+
+  try {
+    // Verify camera belongs to organization
+    const cameraResult = await db.queryAsOrg(
+      auth.organizationId,
+      'SELECT id FROM cameras WHERE id = $1 AND organization_id = $2',
+      [camera_id, auth.organizationId],
+    );
+    if (cameraResult.rows.length === 0) {
+      res.status(404).json({ success: false, error: 'Camera not found in your organization' });
+      return;
+    }
+
+    // Create a manual event and incident
+    const eventResult = await db.queryAsOrg(
+      auth.organizationId,
+      `INSERT INTO events (organization_id, camera_id, event_type, description, is_dismissed)
+       VALUES ($1, $2, 'manual_incident', $3, FALSE)
+       RETURNING id, created_at`,
+      [auth.organizationId, camera_id, notes || 'Manually created incident'],
+    );
+    const eventId = eventResult.rows[0].id;
+
+    const incidentResult = await db.queryAsOrg(
+      auth.organizationId,
+      `INSERT INTO incidents (organization_id, event_id, camera_id, status, severity, assigned_operator_id)
+       VALUES ($1, $2, $3, 'New', $4, $5)
+       RETURNING id, created_at`,
+      [auth.organizationId, eventId, camera_id, severity, auth.userId],
+    );
+
+    await db.query(
+      `INSERT INTO incident_activity_log (incident_id, user_id, action, note)
+       VALUES ($1, $2, 'created', $3)`,
+      [incidentResult.rows[0].id, auth.userId, 'Manually created incident'],
+    );
+
+    const { logAudit, getIp } = require('./_audit');
+    await logAudit({
+      organizationId: auth.organizationId,
+      userId: auth.userId,
+      action: 'incident.created',
+      resourceType: 'incident',
+      resourceId: incidentResult.rows[0].id,
+      metadata: { camera_id, severity, event_id: eventId },
+      ipAddress: getIp(req),
+    });
+
+    res.status(201).json({
+      success: true,
+      incident_id: incidentResult.rows[0].id,
+      event_id: eventId,
+      status: 'New',
+      severity,
+    });
+  } catch (err) {
+    console.error('POST /api/incidents/manual error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
