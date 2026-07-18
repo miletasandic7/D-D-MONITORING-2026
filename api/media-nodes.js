@@ -1,7 +1,7 @@
 const db = require('../db/index');
-const { requireAuth } = require('../lib/_auth');
-const { generateHeartbeatSecret, HEARTBEAT_FRESHNESS_SECONDS } = require('../lib/_media_nodes');
-const { logPlatformAudit, getIp } = require('../lib/_audit');
+const { requireAuth } = require('./_auth');
+const { generateHeartbeatSecret, HEARTBEAT_FRESHNESS_SECONDS } = require('./_media_nodes');
+const { logPlatformAudit, getIp } = require('./_audit');
 
 // GET /api/media-nodes - list all media nodes (platform_admin only)
 async function handleGetMediaNodes(req, res) {
