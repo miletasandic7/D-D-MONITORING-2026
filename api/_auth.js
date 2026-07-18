@@ -112,9 +112,14 @@ async function getDefaultOrganizationId() {
 }
 
 async function syncUserProfile({ authUserId, email }) {
+  console.log('[auth] syncUserProfile called with:', { authUserId, email });
+  
   const existing = await db.query('SELECT id, organization_id, user_type, status FROM users WHERE id = $1', [authUserId]);
+  console.log('[auth] existing users query result:', existing.rows.length, 'rows');
+  
   if (existing.rows.length > 0) {
     const user = existing.rows[0];
+    console.log('[auth] User exists, updating:', user);
     // Update with all required columns
     await db.query(
       `UPDATE users SET last_login_at = now(), updatedAt = now() WHERE id = $1`,
@@ -124,9 +129,12 @@ async function syncUserProfile({ authUserId, email }) {
   }
 
   // First login: create the profile as org_admin on the default org.
+  console.log('[auth] User does not exist, creating new user');
   const organizationId = await getDefaultOrganizationId();
+  console.log('[auth] Got organizationId:', organizationId);
   
   // Insert with all required columns
+  console.log('[auth] Attempting INSERT with:', { authUserId, email, organizationId });
   const inserted = await db.query(
     `INSERT INTO users (id, name, email, emailVerified, createdAt, updatedAt, organization_id, user_type, status, last_login_at)
      VALUES ($1, $2, $2, true, now(), now(), $3, 'org_admin', 'active', now())
@@ -134,6 +142,7 @@ async function syncUserProfile({ authUserId, email }) {
      RETURNING id, organization_id, user_type, status`,
     [authUserId, email, organizationId],
   );
+  console.log('[auth] INSERT result:', inserted.rows);
   return inserted.rows[0];
 }
 
@@ -145,8 +154,10 @@ async function syncUserProfile({ authUserId, email }) {
  *   if (!auth) return; // response already sent
  */
 async function requireAuth(req, res, { roles } = {}) {
+  console.log('[auth] requireAuth called, method:', req.method);
+  
   if (!db.hasDatabase) {
-    console.error('[auth:503] DATABASE_URL is missing or the "pg" module failed to load -- see /api/health for details');
+    console.error('[auth:503] DATABASE_URL is missing or the "pg" module failed to load');
     res.status(503).json({ success: false, error: 'Database not configured. Set DATABASE_URL environment variable.' });
     return null;
   }
@@ -154,7 +165,9 @@ async function requireAuth(req, res, { roles } = {}) {
   let identity;
   try {
     identity = await verifyToken(req);
+    console.log('[auth] Token verified, identity:', identity);
   } catch (err) {
+    console.error('[auth] Token verify error:', err.message);
     res.status(err.statusCode || 401).json({ success: false, error: err.message });
     return null;
   }
@@ -162,9 +175,10 @@ async function requireAuth(req, res, { roles } = {}) {
   let profile;
   try {
     profile = await syncUserProfile(identity);
+    console.log('[auth] Profile synced:', profile);
   } catch (err) {
-    console.error('User profile sync error:', err.message);
-    res.status(err.statusCode || 500).json({ success: false, error: err.message });
+    console.error('[auth] User profile sync ERROR:', err.message, err.stack);
+    res.status(err.statusCode || 500).json({ success: false, error: 'Profile sync failed: ' + err.message });
     return null;
   }
 
