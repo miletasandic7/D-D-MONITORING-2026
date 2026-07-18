@@ -305,7 +305,7 @@ export default function Dashboard() {
     }
     setAddCamSaving(true);
     setAddCamError('');
-    const id = `CAM-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+    const id = `CAM-${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
     const newCam = {
       id,
       name: addCamForm.name.trim(),

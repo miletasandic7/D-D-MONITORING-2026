@@ -78,7 +78,7 @@ async function uploadObject({ key, body, contentType }) {
 
   const base = getStoragePublicBase();
   if (!base) {
-    const err = new Error('Object storage public URL is not configured. Set STORAGE_PUBLIC_BASE_URL (or STORAGE_ENDPOINT).');
+    const err = new Error('Object storage public URL is not configured. Set STORAGE_PUBLIC_BASE_URL, or set both STORAGE_ENDPOINT and STORAGE_BUCKET.');
     err.statusCode = 503;
     throw err;
   }
