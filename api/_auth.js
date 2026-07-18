@@ -115,7 +115,11 @@ async function syncUserProfile({ authUserId, email }) {
   const existing = await db.query('SELECT id, organization_id, user_type, status FROM users WHERE id = $1', [authUserId]);
   if (existing.rows.length > 0) {
     const user = existing.rows[0];
-    await db.query('UPDATE users SET last_login_at = now() WHERE id = $1', [authUserId]);
+    // Update with all required columns
+    await db.query(
+      `UPDATE users SET last_login_at = now(), updatedAt = now() WHERE id = $1`,
+      [authUserId]
+    );
     return user;
   }
 
@@ -126,7 +130,7 @@ async function syncUserProfile({ authUserId, email }) {
   const inserted = await db.query(
     `INSERT INTO users (id, name, email, emailVerified, createdAt, updatedAt, organization_id, user_type, status, last_login_at)
      VALUES ($1, $2, $2, true, now(), now(), $3, 'org_admin', 'active', now())
-     ON CONFLICT (id) DO UPDATE SET last_login_at = now()
+     ON CONFLICT (id) DO UPDATE SET last_login_at = now(), updatedAt = now()
      RETURNING id, organization_id, user_type, status`,
     [authUserId, email, organizationId],
   );
