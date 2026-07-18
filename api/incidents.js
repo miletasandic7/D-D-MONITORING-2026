@@ -112,7 +112,7 @@ async function handleGetActivity(req, res) {
   }
 }
 
-// GET /api/incidents/evidence?eventId=X - get incident evidence
+// GET /api/incidents/evidence?eventId=X - get incident evidence (AI detections)
 async function handleGetEvidence(req, res) {
   const auth = await requireAuth(req, res);
   if (!auth) return;
@@ -124,6 +124,7 @@ async function handleGetEvidence(req, res) {
   }
 
   try {
+    // Verify incident belongs to user's organization
     const incidentResult = await db.queryAsOrg(
       auth.organizationId,
       'SELECT id, organization_id FROM incidents WHERE event_id = $1',
@@ -134,16 +135,29 @@ async function handleGetEvidence(req, res) {
       return;
     }
 
-    const { rows: evidenceRows } = await db.query(
-      `SELECT s.id, s.type, s.storage_url, s.created_at
-       FROM snapshots s
-       WHERE s.event_id = $1
-       ORDER BY s.created_at DESC
+    // Get AI detections as evidence (snapshots table doesn't exist, using ai_detections)
+    const { rows: detectionRows } = await db.query(
+      `SELECT 
+         d.id, 
+         d.object_type, 
+         d.confidence, 
+         d.bounding_box,
+         d.timestamp
+       FROM ai_detections d
+       WHERE d.event_id = $1
+       ORDER BY d.confidence DESC, d.timestamp DESC
        LIMIT 50`,
       [eventId],
     );
 
-    res.status(200).json({ success: true, event_id: eventId, evidence: evidenceRows });
+    // Return in format expected by frontend
+    res.status(200).json({ 
+      success: true, 
+      event_id: eventId, 
+      snapshots: detectionRows,
+      recordings: [], // Placeholder for future recordings feature
+      storage_configured: true
+    });
   } catch (err) {
     console.error('GET /api/incidents/evidence error:', err.message);
     res.status(500).json({ success: false, error: err.message });

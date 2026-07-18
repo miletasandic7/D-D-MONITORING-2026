@@ -17,6 +17,23 @@ CREATE TABLE cameras (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Snapshots table for manual and automatic camera captures
+CREATE TABLE snapshots (
+    id SERIAL PRIMARY KEY,
+    camera_id VARCHAR(20) NOT NULL REFERENCES cameras(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL,
+    taken_by_user_id UUID,
+    taken_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    storage_url TEXT,
+    trigger VARCHAR(20) DEFAULT 'manual',
+    file_size_bytes INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_snapshots_camera_id ON snapshots(camera_id);
+CREATE INDEX idx_snapshots_organization_id ON snapshots(organization_id);
+CREATE INDEX idx_snapshots_taken_at ON snapshots(taken_at DESC);
+
 -- Events table with AI detection attributes
 CREATE TABLE events (
     id SERIAL PRIMARY KEY,

@@ -139,11 +139,11 @@ export default function Login() {
   const [ppStatus, setPpStatus] = useState('');
   const [ppError, setPpError] = useState('');
   const [district, setDistrict] = useState('');
-  const [contacts, setContacts] = useState({ police: '', fire: '', ambulance: '', command: '' });
+  const [contacts, setContacts] = useState({ policeStation: '', fireService: '', ambulance: '', localCommand: '' });
   const [legalModal, setLegalModal] = useState(null);
 
   const plan = PLANS.find((p) => p.id === planId) || PLANS[1];
-  const contactsFilled = [district, contacts.police, contacts.fire, contacts.ambulance, contacts.command].every(
+  const contactsFilled = [district, contacts.policeStation, contacts.fireService, contacts.ambulance, contacts.localCommand].every(
     (v) => String(v || '').trim().length > 0
   );
 
@@ -161,7 +161,7 @@ export default function Login() {
         const buttons = paypal.Buttons({
           style: { layout: 'vertical', shape: 'rect', label: 'paypal', height: 48 },
           createOrder: async () => {
-            const res = await api.post('/paypal/orders', {
+            const res = await api.post('/paypal', {
               planId: plan.id,
               planName: plan.name,
               amount: plan.amount,
@@ -172,7 +172,7 @@ export default function Login() {
             return res.data.id;
           },
           onApprove: async (data) => {
-            const res = await api.post(`/paypal/orders/${data.orderID}/capture`, { planId: plan.id });
+            const res = await api.post('/paypal', { orderId: data.orderID });
             if (!cancelled) {
               setStep('complete');
               setPpStatus(`Payment confirmed: ${res.data.status || 'COMPLETED'}`);
@@ -197,7 +197,7 @@ export default function Login() {
       if (ppRef.current) ppRef.current.innerHTML = '';
     };
   }, [step, plan.id, plan.name, plan.amount, district,
-    contacts.police, contacts.fire, contacts.ambulance, contacts.command, contactsFilled]);
+    contacts.policeStation, contacts.fireService, contacts.ambulance, contacts.localCommand, contactsFilled]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -275,11 +275,11 @@ export default function Login() {
                       </label>
                       <label className="pr-cfield">
                         <span>Police station</span>
-                        <input value={contacts.police} onChange={(e) => setContacts((c) => ({ ...c, police: e.target.value }))} placeholder="110 / local number" required />
+                        <input value={contacts.policeStation} onChange={(e) => setContacts((c) => ({ ...c, policeStation: e.target.value }))} placeholder="110 / local number" required />
                       </label>
                       <label className="pr-cfield">
                         <span>Fire service</span>
-                        <input value={contacts.fire} onChange={(e) => setContacts((c) => ({ ...c, fire: e.target.value }))} placeholder="112 / local number" required />
+                        <input value={contacts.fireService} onChange={(e) => setContacts((c) => ({ ...c, fireService: e.target.value }))} placeholder="112 / local number" required />
                       </label>
                       <label className="pr-cfield">
                         <span>Ambulance / medical</span>
@@ -287,7 +287,7 @@ export default function Login() {
                       </label>
                       <label className="pr-cfield">
                         <span>Local command center</span>
-                        <input value={contacts.command} onChange={(e) => setContacts((c) => ({ ...c, command: e.target.value }))} placeholder="District dispatch" required />
+                        <input value={contacts.localCommand} onChange={(e) => setContacts((c) => ({ ...c, localCommand: e.target.value }))} placeholder="District dispatch" required />
                       </label>
                     </div>
 

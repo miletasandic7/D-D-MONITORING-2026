@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { jwksClient } = require('jwks-rsa');
 const db = require('../db/index');
 
 // =========================================================
@@ -16,6 +17,34 @@ const db = require('../db/index');
 
 const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
+// JWKS client for fetching public keys from JWKS URL
+let jwks = null;
+function getJwksClient(jwksUrl) {
+  if (!jwks) {
+    jwks = jwksClient({
+      jwksUri: jwksUrl,
+      cache: true,
+      cacheMaxAge: 600000, // 10 minutes
+      rateLimit: true,
+      jwksRequestsPerMinute: 10,
+    });
+  }
+  return jwks;
+}
+
+// Get signing key from JWKS
+function getSigningKey(header, callback) {
+  const client = getJwksClient(SUPABASE_JWT_SECRET);
+  client.getSigningKey(header.kid, (err, key) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
 async function verifyToken(req) {
   const header = req.headers['authorization'] || req.headers['Authorization'];
   if (!header || !header.startsWith('Bearer ')) {
@@ -32,34 +61,56 @@ async function verifyToken(req) {
     throw err;
   }
 
-  // Determine allowed algorithms based on secret type.
-  // HS256: symmetric (SUPABASE_JWT_SECRET is the shared secret)
-  // RS256/ES256: asymmetric (SUPABASE_JWT_SECRET contains the public key or JWKS URL)
-  const allowedAlgs = ['HS256'];
+  let payload;
   const secret = SUPABASE_JWT_SECRET;
 
-  // Check if secret looks like a PEM public key or JWKS URL
-  if (secret.startsWith('-----BEGIN ') || secret.startsWith('http')) {
-    allowedAlgs.length = 0;
+  // JWKS URL - use jwks-rsa for proper key fetching
+  if (secret.startsWith('http')) {
+    try {
+      payload = await new Promise((resolve, reject) => {
+        jwt.verify(token, getSigningKey, {
+          algorithms: ['RS256', 'RS384', 'ES256', 'ES384'],
+          issuer: undefined, // skip issuer check for flexibility
+        }, (err, decoded) => {
+          if (err) reject(err);
+          else resolve(decoded);
+        });
+      });
+    } catch (e) {
+      const err = new Error('Invalid or expired token');
+      err.statusCode = 401;
+      throw err;
+    }
+  }
+  // PEM public key - use RS256/ES256
+  else if (secret.startsWith('-----BEGIN ')) {
+    const allowedAlgs = [];
     if (secret.includes('RSA PUBLIC KEY') || secret.includes('CERTIFICATE')) {
-      allowedAlgs.push('RS256');
+      allowedAlgs.push('RS256', 'RS384');
     }
     if (secret.includes('EC PUBLIC KEY')) {
-      allowedAlgs.push('ES256');
+      allowedAlgs.push('ES256', 'ES384');
     }
-    // Default to supporting all asymmetric algorithms if secret format detected
     if (allowedAlgs.length === 0) {
       allowedAlgs.push('RS256', 'ES256', 'RS384', 'ES384');
     }
+    try {
+      payload = jwt.verify(token, secret, { algorithms: allowedAlgs });
+    } catch (e) {
+      const err = new Error('Invalid or expired token');
+      err.statusCode = 401;
+      throw err;
+    }
   }
-
-  let payload;
-  try {
-    payload = jwt.verify(token, secret, { algorithms: allowedAlgs });
-  } catch (e) {
-    const err = new Error('Invalid or expired token');
-    err.statusCode = 401;
-    throw err;
+  // Plain secret - use HS256
+  else {
+    try {
+      payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
+    } catch (e) {
+      const err = new Error('Invalid or expired token');
+      err.statusCode = 401;
+      throw err;
+    }
   }
 
   if (!payload.sub || !payload.email) {

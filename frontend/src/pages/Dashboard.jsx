@@ -469,7 +469,7 @@ export default function Dashboard() {
             height: 48,
           },
           createOrder: async () => {
-            const response = await api.post('/paypal/orders', {
+            const response = await api.post('/paypal', {
               planId: selectedPlan.id,
               planName: selectedPlan.name,
               amount: selectedPlanAmount,
@@ -768,7 +768,7 @@ export default function Dashboard() {
   const exportEvidence = async (event) => {
     let evidence = { recordings: [], snapshots: [], storage_configured: false };
     try {
-      const res = await api.get(`/incidents/${event.eventId}/evidence`);
+      const res = await api.get(`/incidents/evidence?eventId=${event.eventId}`);
       evidence = res.data;
     } catch (err) {
       // Fall through with empty evidence rather than blocking the
@@ -811,7 +811,7 @@ export default function Dashboard() {
   const updateIncidentStatus = async (eventId, status) => {
     try {
       setUpdatingIncidentId(eventId);
-      await api.patch(`/incidents/${eventId}/status`, { status });
+      await api.patch(`/incidents/status?eventId=${eventId}`, { status });
       setIncidents((previous) => previous.map((incident) => (
         incident.event_id === eventId ? { ...incident, status } : incident
       )));
