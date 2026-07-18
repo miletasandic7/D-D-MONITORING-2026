@@ -1,0 +1,118 @@
+import React, { useState } from 'react';
+
+const PAGE_CSS = `
+  .settings-page { padding: 2rem; color: #e5eef7; max-width: 800px; }
+  .settings-title { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: #dff5ff; margin-bottom: 2rem; }
+  .settings-section { background: rgba(10,18,38,.85); border: 1px solid rgba(87,140,255,.18); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .settings-section h3 { color: #8ee8ff; font-size: .9rem; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 1rem; }
+  .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid rgba(87,125,196,.12); }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { color: #dff7ff; }
+  .setting-desc { color: #8ab0c9; font-size: .85rem; margin-top: .25rem; }
+  .toggle { width: 50px; height: 26px; background: rgba(87,125,196,.3); border-radius: 13px; position: relative; cursor: pointer; transition: background .2s; }
+  .toggle.active { background: linear-gradient(135deg,#00d4ff,#8c4dff); }
+  .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 3px; left: 3px; transition: transform .2s; }
+  .toggle.active::after { transform: translateX(24px); }
+  .version { color: #6a8aaa; font-size: .8rem; margin-top: 2rem; text-align: center; }
+`;
+
+export default function Settings() {
+  const [notifications, setNotifications] = useState(true);
+  const [autoReports, setAutoReports] = useState(false);
+  const [mapOverlay, setMapOverlay] = useState(true);
+
+  return (
+    <>
+      <style>{PAGE_CSS}</style>
+      <div className="settings-page">
+        <h1 className="settings-title">Settings</h1>
+
+        <div className="settings-section">
+          <h3>Notifications</h3>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Email Alerts</div>
+              <div className="setting-desc">Receive email notifications for critical alerts</div>
+            </div>
+            <div 
+              className={`toggle ${notifications ? 'active' : ''}`} 
+              onClick={() => setNotifications(!notifications)}
+            />
+          </div>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Push Notifications</div>
+              <div className="setting-desc">Browser push notifications for real-time alerts</div>
+            </div>
+            <div className="toggle active" />
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3>Reports</h3>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Automatic Reports</div>
+              <div className="setting-desc">Generate daily security summary reports</div>
+            </div>
+            <div 
+              className={`toggle ${autoReports ? 'active' : ''}`} 
+              onClick={() => setAutoReports(!autoReports)}
+            />
+          </div>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Weekly Summary</div>
+              <div className="setting-desc">Send weekly incident summary to email</div>
+            </div>
+            <div className="toggle" />
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3>Map & Display</h3>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Map Overlays</div>
+              <div className="setting-desc">Show camera coverage zones on map</div>
+            </div>
+            <div 
+              className={`toggle ${mapOverlay ? 'active' : ''}`} 
+              onClick={() => setMapOverlay(!mapOverlay)}
+            />
+          </div>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Dark Mode</div>
+              <div className="setting-desc">Always use dark theme</div>
+            </div>
+            <div className="toggle active" />
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3>System</h3>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">API Status</div>
+              <div className="setting-desc">Backend connection status</div>
+            </div>
+            <span style={{ color: '#00d450', fontWeight: 'bold' }}>ONLINE</span>
+          </div>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Database</div>
+              <div className="setting-desc">PostgreSQL connection</div>
+            </div>
+            <span style={{ color: '#00d450', fontWeight: 'bold' }}>CONNECTED</span>
+          </div>
+        </div>
+
+        <div className="version">
+          D&D Global AI Surveillance v1.0.0<br/>
+          Security Command Center
+        </div>
+      </div>
+    </>
+  );
+}

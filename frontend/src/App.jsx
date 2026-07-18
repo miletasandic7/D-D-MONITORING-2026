@@ -5,6 +5,14 @@ import Login from './pages/Login';
 // Dashboard is code-split: HLS.js + all heavy libs only load after login
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 
+// Lazy load new pages
+const Users = lazy(() => import('./pages/Users'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Map = lazy(() => import('./pages/Map'));
+const AIDetection = lazy(() => import('./pages/AIDetection'));
+
 function App() {
   return (
     <Router>
@@ -12,6 +20,12 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/subscription" element={<Subscription />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/map" element={<Map />} />
+          <Route path="/ai-detection" element={<AIDetection />} />
         </Routes>
       </Suspense>
     </Router>

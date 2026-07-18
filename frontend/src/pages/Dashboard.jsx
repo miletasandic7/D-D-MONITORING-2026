@@ -913,17 +913,17 @@ export default function Dashboard() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
-          <a className="sidebar-nav-item active" href="#overview">Dashboard</a>
-          <a className="sidebar-nav-item" href="#cameras">Cameras</a>
-          <a className="sidebar-nav-item" href="#streams">Live Streams</a>
-          <a className="sidebar-nav-item" href="#alerts">Alerts</a>
-          <a className="sidebar-nav-item" href="#events">Incidents</a>
-          <a className="sidebar-nav-item" href="#map">Map</a>
-          <a className="sidebar-nav-item" href="#detection">AI Detection</a>
-          <a className="sidebar-nav-item" href="#reports">Reports</a>
-          <a className="sidebar-nav-item" href="#users">Users</a>
-          <a className="sidebar-nav-item" href="#settings">Settings</a>
-          <button className="sidebar-nav-item sidebar-billing-btn" type="button" onClick={() => setShowBilling((v) => !v)}>Subscription</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Dashboard</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Cameras</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Live Streams</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Alerts</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Incidents</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/map')}>Map</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/ai-detection')}>AI Detection</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/reports')}>Reports</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/users')}>Users</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/settings')}>Settings</button>
+          <button className="sidebar-nav-item sidebar-billing-btn" onClick={() => navigate('/subscription')}>Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
