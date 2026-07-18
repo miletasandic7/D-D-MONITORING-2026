@@ -24,14 +24,24 @@ module.exports = async (req, res) => {
       // (e.g. single-node deployments that haven't adopted the
       // registry, or a node that was never configured).
       //
+      // rtsp_url is omitted for operator-level callers: it may contain
+      // credentials and the frontend only uses HLS for playback.
+      //
       // Runs via queryAsOrg (Phase 6 RLS): cameras has Row Level
       // Security enabled, so this needs app.current_org_id set for the
       // policy to match -- see db/migrations/007_rls_audit_logs.sql.
-      const baseSelect = `
-        SELECT c.id, c.name, c.rtsp_url, c.location, c.lat, c.lng, c.enabled,
-               c.resolution, c.fps, c.codec, n.public_hls_url AS hls_base_url
-        FROM cameras c
-        LEFT JOIN media_nodes n ON n.id = c.media_node_id`;
+      const isAdmin = auth.userType === 'org_admin' || auth.userType === 'platform_admin';
+      const baseSelect = isAdmin
+        ? `
+          SELECT c.id, c.name, c.rtsp_url, c.location, c.lat, c.lng, c.enabled,
+                 c.resolution, c.fps, c.codec, n.public_hls_url AS hls_base_url
+          FROM cameras c
+          LEFT JOIN media_nodes n ON n.id = c.media_node_id`
+        : `
+          SELECT c.id, c.name, c.location, c.lat, c.lng, c.enabled,
+                 c.resolution, c.fps, c.codec, n.public_hls_url AS hls_base_url
+          FROM cameras c
+          LEFT JOIN media_nodes n ON n.id = c.media_node_id`;
 
       const result = accessibleIds === null
         ? await db.queryAsOrg(auth.organizationId, `${baseSelect} WHERE c.organization_id = $1 ORDER BY c.id`, [auth.organizationId])

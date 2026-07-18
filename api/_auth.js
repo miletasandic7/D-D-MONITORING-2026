@@ -41,6 +41,22 @@ async function verifyToken(req) {
     // this phase, noted in the roadmap.
     payload = jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ['HS256'] });
   } catch (e) {
+    // Detect asymmetric-key tokens early and surface a clear error
+    // rather than a generic "invalid token".
+    try {
+      const decoded = jwt.decode(token, { complete: true });
+      if (decoded?.header?.alg && decoded.header.alg !== 'HS256') {
+        const err = new Error(
+          `JWT algorithm ${decoded.header.alg} is not supported. This server requires HS256. ` +
+          'Check your Supabase project Settings → API → JWT Settings and set algorithm to HS256, ' +
+          'or update SUPABASE_JWT_SECRET to the matching symmetric secret.',
+        );
+        err.statusCode = 401;
+        throw err;
+      }
+    } catch (decodeErr) {
+      if (decodeErr.statusCode) throw decodeErr;
+    }
     const err = new Error('Invalid or expired token');
     err.statusCode = 401;
     throw err;
@@ -77,6 +93,14 @@ async function syncUserProfile({ authUserId, email }) {
   }
 
   // First login: create the profile as org_admin on the default org.
+  // Guard: if DISABLE_AUTO_ORG_ADMIN=true, reject new signups that
+  // would otherwise silently become org_admin (production safety valve
+  // until a proper invite/signup flow exists).
+  if (process.env.DISABLE_AUTO_ORG_ADMIN === 'true') {
+    const err = new Error('New user registration is disabled on this deployment. Contact your administrator.');
+    err.statusCode = 403;
+    throw err;
+  }
   const organizationId = await getDefaultOrganizationId();
   const inserted = await db.query(
     `INSERT INTO users (id, organization_id, email, user_type, status, last_login_at)

@@ -305,7 +305,7 @@ export default function Dashboard() {
     }
     setAddCamSaving(true);
     setAddCamError('');
-    const id = `CAM-${String((cameras?.length || 0) + 1).padStart(2, '0')}`;
+    const id = `CAM-${Date.now().toString(36).toUpperCase()}`;
     const newCam = {
       id,
       name: addCamForm.name.trim(),
@@ -997,9 +997,6 @@ export default function Dashboard() {
             </div>
             <button className="primary-button" onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}>
               + Add Camera
-            </button>
-            <button className="ghost-button" onClick={() => setWizardOpen(true)}>
-              + Create Incident
             </button>
           </div>
         </header>

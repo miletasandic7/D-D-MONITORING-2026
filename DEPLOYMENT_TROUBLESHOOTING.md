@@ -62,7 +62,7 @@ Ovo je nov dijagnostički endpoint (dodat u ovom fix-u) koji vraća tačno
    DATABASE_URL="postgres://..." npm run migrate:postgres
    ```
    To automatski izvršava `db/schema.sql` i **sve** fajlove iz
-   `db/migrations/*.sql` redom. Ako želiš ručno, ekvivalentno je:
+   `db/migrations/*.sql` redom (001–007). Ako želiš ručno, ekvivalentno je:
    ```bash
    psql "$DATABASE_URL" -f db/schema.sql
    psql "$DATABASE_URL" -f db/migrations/001_multi_tenant_foundation.sql
@@ -108,3 +108,9 @@ Ovo je nov dijagnostički endpoint (dodat u ovom fix-u) koji vraća tačno
   vraćaju `503` (ili `200` ako je prosleđen bearer token).
 - `frontend/vite.config.js` — dodat proxy `/api` → `localhost:3001`
   tokom lokalnog razvoja.
+
+## Napomena: SQLite tooling (`db/migrate.js`, `db/sqlite.js`)
+
+Ovi fajlovi su ostaci ranih lokalnih prototipa i **ne koriste se** u produkciji.
+Produkcion stack koristi isključivo PostgreSQL putem `DATABASE_URL`.
+Za pokretanje migracija koristiti `npm run migrate:postgres`.

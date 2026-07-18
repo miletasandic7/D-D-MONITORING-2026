@@ -62,7 +62,14 @@ async function uploadObject({ key, body, contentType }) {
     ContentType: contentType,
   }));
 
-  const base = process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`;
+  const base = process.env.STORAGE_PUBLIC_BASE_URL || process.env.STORAGE_ENDPOINT
+    ? (process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`)
+    : null;
+  if (!base) {
+    const err = new Error('Object storage public URL is not configured. Set STORAGE_PUBLIC_BASE_URL (or STORAGE_ENDPOINT).');
+    err.statusCode = 503;
+    throw err;
+  }
   return `${base.replace(/\/$/, '')}/${key}`;
 }
 
@@ -73,7 +80,7 @@ async function uploadObject({ key, body, contentType }) {
  * workers/retention-job.js).
  */
 function keyFromPublicUrl(storageUrl) {
-  const base = (process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`).replace(/\/$/, '');
+  const base = (process.env.STORAGE_PUBLIC_BASE_URL || (process.env.STORAGE_ENDPOINT ? `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}` : null) || '').replace(/\/$/, '');
   if (storageUrl && storageUrl.startsWith(base)) {
     return storageUrl.slice(base.length + 1);
   }

@@ -5,9 +5,11 @@ const { logPlatformAudit, getIp } = require('../_audit');
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
-    // Any authenticated user can see node health/load (no secrets, no
-    // tenant data) -- useful for an ops/status view in the dashboard.
-    const auth = await requireAuth(req, res);
+    // Only platform_admin may enumerate node infrastructure (hostnames,
+    // capacity, load). Exposing this to every authenticated user leaks
+    // internal topology that is irrelevant -- and potentially sensitive
+    // -- to regular operators and org_admins.
+    const auth = await requireAuth(req, res, { roles: ['platform_admin'] });
     if (!auth) return;
 
     try {

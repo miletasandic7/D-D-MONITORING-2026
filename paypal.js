@@ -119,8 +119,8 @@ async function createPayPalOrder(body = {}) {
           custom_id: plan.id,
           description: `${plan.name} for ${checkout.district}`,
           amount: {
-            currency_code: checkout.currency || plan.currency,
-            value: checkout.amount || plan.amount,
+            currency_code: plan.currency,
+            value: plan.amount,
           },
         },
       ],
