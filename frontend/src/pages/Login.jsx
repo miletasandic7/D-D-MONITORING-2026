@@ -25,6 +25,10 @@ const PAGE_CSS = `
   .lc-field input:focus{border-color:rgba(80,208,255,.75);box-shadow:0 0 0 1px rgba(67,206,255,.18),0 0 22px rgba(63,181,255,.18);}
   .lc-btn{margin-top:.4rem;width:100%;border:0;border-radius:12px;padding:1.05rem;cursor:pointer;font-family:'Orbitron',sans-serif;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.2em;color:#03101c;background:linear-gradient(135deg,#00d4ff 0%,#8c4dff 52%,#ff55cc 100%);box-shadow:0 4px 20px rgba(0,212,255,.2);transition:transform 180ms,filter 180ms;}
   .lc-btn:hover{transform:translateY(-2px);filter:brightness(1.10);}
+  .lc-remember{display:flex;align-items:center;gap:.6rem;margin-top:.3rem;}
+  .lc-remember input[type="checkbox"]{width:18px;height:18px;accent-color:#00d4ff;cursor:pointer;border-radius:4px;}
+  .lc-remember label{font-size:.8rem;color:#8ab0c9;cursor:pointer;user-select:none;}
+  .lc-remember label:hover{color:#8ee8ff;}
   .pr{display:flex;flex-direction:column;gap:1.5rem;}
   .pr-eyebrow{font-size:.7rem;letter-spacing:.34em;text-transform:uppercase;color:#8ee8ff;margin-bottom:.35rem;}
   .pr-heading{font-family:'Orbitron',sans-serif;font-size:clamp(1rem,2vw,1.4rem);font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#dff5ff;margin-bottom:.45rem;}
@@ -131,8 +135,9 @@ const PLANS = [
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberedEmail') || '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('rememberMe') === 'true');
   const ppRef = useRef(null);
   const [planId, setPlanId] = useState('growth');
   const [step, setStep] = useState('plans');
@@ -204,6 +209,15 @@ export default function Login() {
     try {
       const supabase = await getSupabaseClient();
       if (!supabase) { alert('Supabase environment variables are missing.'); return; }
+
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberedEmail');
+        localStorage.setItem('rememberMe', 'false');
+      }
 
       // Clear any stale session data first
       localStorage.removeItem('currentUser');
@@ -343,6 +357,15 @@ export default function Login() {
                   autoComplete="current-password"
                 />
               </label>
+              <div className="lc-remember">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <label htmlFor="rememberMe">Remember me</label>
+              </div>
               <button type="submit" className="lc-btn">Enter Secure Console</button>
             </form>
           </section>
