@@ -1,5 +1,6 @@
-const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
 const db = require('../db/index');
+const https = require('https');
 
 // =========================================================
 // Phase 1 RBAC: authenticate the Supabase-issued JWT, sync a local
@@ -17,19 +18,49 @@ const db = require('../db/index');
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Create a Supabase client for server-side operations
-let supabaseAdmin = null;
-
-function getSupabaseAdmin() {
-  if (!supabaseAdmin && SUPABASE_URL && SUPABASE_ANON_KEY) {
-    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+// Verify JWT with Supabase using direct HTTP call
+async function verifyTokenWithSupabase(token) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${SUPABASE_URL}/auth/v1/user`);
+    const options = {
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': SUPABASE_ANON_KEY,
       }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const user = JSON.parse(data);
+            resolve(user);
+          } catch (e) {
+            reject(new Error('Failed to parse Supabase response'));
+          }
+        } else {
+          reject(new Error(`Supabase returned ${res.statusCode}`));
+        }
+      });
     });
-  }
-  return supabaseAdmin;
+
+    req.on('error', (e) => {
+      reject(new Error(`Supabase request failed: ${e.message}`));
+    });
+
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('Supabase request timed out'));
+    });
+
+    req.end();
+  });
 }
 
 async function verifyToken(req) {
@@ -48,21 +79,14 @@ async function verifyToken(req) {
     throw err;
   }
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) {
-    const err = new Error('Failed to create Supabase client');
-    err.statusCode = 503;
-    throw err;
-  }
-
-  // Use Supabase to verify the JWT and get user info
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-
-  if (error || !user) {
-    console.error('[auth:401] Token verification failed:', error?.message || 'No user returned');
-    const err = new Error('Invalid or expired token');
-    err.statusCode = 401;
-    throw err;
+  let user;
+  try {
+    user = await verifyTokenWithSupabase(token);
+  } catch (err) {
+    console.error('[auth:401] Token verification failed:', err.message);
+    const newErr = new Error('Invalid or expired token');
+    newErr.statusCode = 401;
+    throw newErr;
   }
 
   if (!user.id || !user.email) {
