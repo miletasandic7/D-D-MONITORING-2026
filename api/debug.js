@@ -9,39 +9,31 @@ module.exports = async (req, res) => {
   
   // GET request - return env info and test DB
   if (req.method === 'GET') {
-    let dbStatus = 'unknown';
-    let dbError = null;
-    
-    try {
-      const result = await db.query('SELECT COUNT(*) as count FROM organizations');
-      dbStatus = 'OK - ' + result.rows[0].count + ' organizations';
-    } catch (err) {
-      dbStatus = 'ERROR';
-      dbError = err.message;
-    }
-    
-    let usersCount = 'unknown';
-    try {
-      const result = await db.query('SELECT COUNT(*) as count FROM users');
-      usersCount = result.rows[0].count + ' users';
-    } catch (err) {
-      usersCount = 'ERROR: ' + err.message;
-    }
-    
-    res.json({
+    let results = {
       supabaseUrl: SUPABASE_URL ? 'SET' : 'NOT SET',
       supabaseKey: SUPABASE_ANON_KEY ? 'SET' : 'NOT SET',
       hasDatabase: Boolean(process.env.DATABASE_URL),
-      dbStatus,
-      dbError,
-      usersCount,
-      nodeVersion: process.version,
-      timestamp: new Date().toISOString()
-    });
+    };
+    
+    // Test all tables
+    const tables = ['organizations', 'users', 'cameras', 'incidents', 'events', 'media_nodes'];
+    results.tables = {};
+    
+    for (const table of tables) {
+      try {
+        const result = await db.query(`SELECT COUNT(*) as count FROM ${table}`);
+        results.tables[table] = { status: 'OK', count: parseInt(result.rows[0].count) };
+      } catch (err) {
+        results.tables[table] = { status: 'ERROR', error: err.message };
+      }
+    }
+    
+    results.timestamp = new Date().toISOString();
+    res.json(results);
     return;
   }
   
-  // POST request - test full auth flow
+  // POST request - test full auth flow step by step
   if (req.method === 'POST') {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
@@ -50,34 +42,60 @@ module.exports = async (req, res) => {
       return;
     }
     
+    const steps = {};
+    
     try {
       // Step 1: Verify with Supabase
+      steps.supabase = 'testing...';
       const user = await verifyWithSupabase(token);
+      steps.supabase = { success: true, userId: user.id, email: user.email };
       
       // Step 2: Check if user exists in DB
-      let dbUser = null;
-      let dbError = null;
+      steps.dbUserCheck = 'testing...';
       try {
         const result = await db.query('SELECT * FROM users WHERE id = $1', [user.id]);
-        dbUser = result.rows[0] || null;
+        steps.dbUserCheck = { exists: result.rows.length > 0, data: result.rows[0] || null };
       } catch (err) {
-        dbError = err.message;
+        steps.dbUserCheck = { error: err.message };
       }
       
-      res.json({ 
-        success: true, 
-        supabaseUser: {
-          id: user.id,
-          email: user.email
-        },
-        dbUser,
-        dbError
-      });
+      // Step 3: Get default organization
+      steps.getOrg = 'testing...';
+      try {
+        const org = await db.query("SELECT id FROM organizations WHERE name = 'Default Organization' LIMIT 1");
+        steps.getOrg = { success: true, orgId: org.rows[0]?.id };
+      } catch (err) {
+        steps.getOrg = { error: err.message };
+      }
+      
+      // Step 4: Try to sync user
+      steps.syncUser = 'testing...';
+      if (steps.dbUserCheck?.exists) {
+        try {
+          await db.query('UPDATE users SET last_login_at = now(), updatedAt = now() WHERE id = $1', [user.id]);
+          steps.syncUser = { success: true, action: 'updated existing user' };
+        } catch (err) {
+          steps.syncUser = { error: err.message };
+        }
+      } else {
+        const orgId = steps.getOrg?.orgId;
+        if (orgId) {
+          try {
+            await db.query(
+              `INSERT INTO users (id, name, email, emailVerified, createdAt, updatedAt, organization_id, user_type, status, last_login_at)
+               VALUES ($1, $2, $2, true, now(), now(), $3, 'org_admin', 'active', now())`,
+              [user.id, user.email, orgId]
+            );
+            steps.syncUser = { success: true, action: 'created new user' };
+          } catch (err) {
+            steps.syncUser = { error: err.message };
+          }
+        }
+      }
+      
+      res.json({ success: true, steps });
     } catch (err) {
-      res.status(401).json({ 
-        error: 'Auth failed', 
-        message: err.message 
-      });
+      res.status(401).json({ error: 'Auth failed', message: err.message, steps });
     }
     return;
   }
