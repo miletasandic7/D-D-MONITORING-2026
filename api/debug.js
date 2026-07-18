@@ -7,20 +7,41 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPA
 module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   
-  // GET request - return env info
+  // GET request - return env info and test DB
   if (req.method === 'GET') {
+    let dbStatus = 'unknown';
+    let dbError = null;
+    
+    try {
+      const result = await db.query('SELECT COUNT(*) as count FROM organizations');
+      dbStatus = 'OK - ' + result.rows[0].count + ' organizations';
+    } catch (err) {
+      dbStatus = 'ERROR';
+      dbError = err.message;
+    }
+    
+    let usersCount = 'unknown';
+    try {
+      const result = await db.query('SELECT COUNT(*) as count FROM users');
+      usersCount = result.rows[0].count + ' users';
+    } catch (err) {
+      usersCount = 'ERROR: ' + err.message;
+    }
+    
     res.json({
       supabaseUrl: SUPABASE_URL ? 'SET' : 'NOT SET',
       supabaseKey: SUPABASE_ANON_KEY ? 'SET' : 'NOT SET',
-      supabaseUrlValue: SUPABASE_URL ? (SUPABASE_URL.substring(0, 30) + '...') : null,
       hasDatabase: Boolean(process.env.DATABASE_URL),
+      dbStatus,
+      dbError,
+      usersCount,
       nodeVersion: process.version,
       timestamp: new Date().toISOString()
     });
     return;
   }
   
-  // POST request - test auth
+  // POST request - test full auth flow
   if (req.method === 'POST') {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
@@ -29,13 +50,28 @@ module.exports = async (req, res) => {
       return;
     }
     
-    // Test Supabase auth
     try {
+      // Step 1: Verify with Supabase
       const user = await verifyWithSupabase(token);
+      
+      // Step 2: Check if user exists in DB
+      let dbUser = null;
+      let dbError = null;
+      try {
+        const result = await db.query('SELECT * FROM users WHERE id = $1', [user.id]);
+        dbUser = result.rows[0] || null;
+      } catch (err) {
+        dbError = err.message;
+      }
+      
       res.json({ 
         success: true, 
-        userId: user?.id,
-        email: user?.email
+        supabaseUser: {
+          id: user.id,
+          email: user.email
+        },
+        dbUser,
+        dbError
       });
     } catch (err) {
       res.status(401).json({ 
