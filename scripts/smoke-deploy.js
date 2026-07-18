@@ -15,6 +15,11 @@ if (!deployBaseUrl) {
   process.exit(1);
 }
 
+if (!/^https?:\/\//.test(deployBaseUrl)) {
+  console.error('[smoke:deploy] DEPLOY_BASE_URL must start with http:// or https://');
+  process.exit(1);
+}
+
 async function requestJson(pathname, { requireSuccess = false, allowAuthFailure = false } = {}) {
   const headers = bearerToken ? { Authorization: `${bearerPrefix}${bearerToken}` } : {};
   const response = await fetch(`${deployBaseUrl}${pathname}`, {

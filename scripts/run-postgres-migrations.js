@@ -63,7 +63,9 @@ async function main() {
     console.error('[migrate:postgres] Migration failed:', error.message);
     process.exitCode = 1;
   } finally {
-    await client.end().catch(() => {});
+    await client.end().catch((error) => {
+      console.warn('[migrate:postgres] Failed to close DB connection cleanly:', error.message);
+    });
   }
 }
 
