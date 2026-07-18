@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
+const { createClient } = require('@supabase/supabase-js');
 const db = require('../db/index');
 
 // =========================================================
@@ -16,25 +15,21 @@ const db = require('../db/index');
 // =========================================================
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const JWKS_URI = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/jwks` : null;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-// JWKS client for fetching public keys (supports both ECC and RSA keys)
-const jwksClientInstance = jwksClient({
-  jwksUri: JWKS_URI || 'https://placeholder.supabase.co/auth/v1/jwks',
-  cache: true,
-  cacheMaxEntries: 5,
-  cacheMaxAge: 600000, // 10 minutes
-});
+// Create a Supabase client for server-side operations
+let supabaseAdmin = null;
 
-function getKey(header, callback) {
-  jwksClientInstance.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    const signingKey = key.getPublicKey();
-    callback(null, signingKey);
-  });
+function getSupabaseAdmin() {
+  if (!supabaseAdmin && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+  return supabaseAdmin;
 }
 
 async function verifyToken(req) {
@@ -46,35 +41,37 @@ async function verifyToken(req) {
   }
   const token = header.slice('Bearer '.length).trim();
 
-  if (!SUPABASE_URL) {
-    console.error('[auth:503] SUPABASE_URL env var is not set on this deployment');
-    const err = new Error('Server auth is not configured (SUPABASE_URL missing)');
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error('[auth:503] SUPABASE_URL or SUPABASE_ANON_KEY env var is not set on this deployment');
+    const err = new Error('Server auth is not configured');
     err.statusCode = 503;
     throw err;
   }
 
-  let payload;
-  try {
-    // Supabase uses JWKS for token verification - supports both ECC (P-256) and RSA keys
-    payload = await new Promise((resolve, reject) => {
-      jwt.verify(token, getKey, { algorithms: ['ES256', 'RS256'] }, (err, decoded) => {
-        if (err) reject(err);
-        else resolve(decoded);
-      });
-    });
-  } catch {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    const err = new Error('Failed to create Supabase client');
+    err.statusCode = 503;
+    throw err;
+  }
+
+  // Use Supabase to verify the JWT and get user info
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    console.error('[auth:401] Token verification failed:', error?.message || 'No user returned');
     const err = new Error('Invalid or expired token');
     err.statusCode = 401;
     throw err;
   }
 
-  if (!payload.sub || !payload.email) {
+  if (!user.id || !user.email) {
     const err = new Error('Token missing required claims (sub, email)');
     err.statusCode = 401;
     throw err;
   }
 
-  return { authUserId: payload.sub, email: payload.email };
+  return { authUserId: user.id, email: user.email };
 }
 
 async function getDefaultOrganizationId() {
