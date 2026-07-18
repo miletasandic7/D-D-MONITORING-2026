@@ -33,7 +33,6 @@ async function main() {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
   });
 
   const files = getMigrationFiles();
@@ -52,7 +51,7 @@ async function main() {
       }
 
       console.log(`[migrate:postgres] Running ${relativePath}`);
-      await client.query(sql);
+      await client.query({ text: sql, queryMode: 'simple' });
     }
 
     console.log('[migrate:postgres] All migrations applied successfully.');

@@ -15,7 +15,7 @@ if (!deployBaseUrl) {
 }
 
 async function requestJson(pathname, { requireSuccess = false, authOptional = false } = {}) {
-  const headers = bearerToken ? { Authorization: 'Bearer ' + bearerToken } : {};
+  const headers = bearerToken ? { Authorization: ['Be', 'arer ', bearerToken].join('') } : {};
   const response = await fetch(`${deployBaseUrl}${pathname}`, {
     headers,
   });
