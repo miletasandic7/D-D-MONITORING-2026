@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 const db = require('../db/index');
 
 // =========================================================
@@ -14,7 +15,27 @@ const db = require('../db/index');
 // exist.
 // =========================================================
 
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const JWKS_URI = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/jwks` : null;
+
+// JWKS client for fetching public keys (supports both ECC and RSA keys)
+const jwksClientInstance = jwksClient({
+  jwksUri: JWKS_URI || 'https://placeholder.supabase.co/auth/v1/jwks',
+  cache: true,
+  cacheMaxEntries: 5,
+  cacheMaxAge: 600000, // 10 minutes
+});
+
+function getKey(header, callback) {
+  jwksClientInstance.getSigningKey(header.kid, (err, key) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
 
 async function verifyToken(req) {
   const header = req.headers['authorization'] || req.headers['Authorization'];
@@ -25,21 +46,22 @@ async function verifyToken(req) {
   }
   const token = header.slice('Bearer '.length).trim();
 
-  if (!SUPABASE_JWT_SECRET) {
-    console.error('[auth:503] SUPABASE_JWT_SECRET env var is not set on this deployment');
-    const err = new Error('Server auth is not configured (SUPABASE_JWT_SECRET missing)');
+  if (!SUPABASE_URL) {
+    console.error('[auth:503] SUPABASE_URL env var is not set on this deployment');
+    const err = new Error('Server auth is not configured (SUPABASE_URL missing)');
     err.statusCode = 503;
     throw err;
   }
 
   let payload;
   try {
-    // Supabase issues HS256 JWTs signed with the project's JWT secret
-    // (Settings -> API -> JWT Secret). If the project uses the newer
-    // asymmetric (RS256/ES256) signing keys instead, this verification
-    // needs to switch to JWKS-based verification -- out of scope for
-    // this phase, noted in the roadmap.
-    payload = jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ['HS256'] });
+    // Supabase uses JWKS for token verification - supports both ECC (P-256) and RSA keys
+    payload = await new Promise((resolve, reject) => {
+      jwt.verify(token, getKey, { algorithms: ['ES256', 'RS256'] }, (err, decoded) => {
+        if (err) reject(err);
+        else resolve(decoded);
+      });
+    });
   } catch {
     const err = new Error('Invalid or expired token');
     err.statusCode = 401;
