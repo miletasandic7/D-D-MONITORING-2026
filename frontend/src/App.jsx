@@ -12,6 +12,9 @@ const Subscription = lazy(() => import('./pages/Subscription'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Map = lazy(() => import('./pages/Map'));
 const AIDetection = lazy(() => import('./pages/AIDetection'));
+const LiveStreams = lazy(() => import('./pages/LiveStreams'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const Incidents = lazy(() => import('./pages/Incidents'));
 
 function App() {
   return (
@@ -26,6 +29,9 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/map" element={<Map />} />
           <Route path="/ai-detection" element={<AIDetection />} />
+          <Route path="/live-streams" element={<LiveStreams />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/incidents" element={<Incidents />} />
         </Routes>
       </Suspense>
     </Router>

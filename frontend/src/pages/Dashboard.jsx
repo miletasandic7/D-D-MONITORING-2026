@@ -915,9 +915,9 @@ export default function Dashboard() {
         <nav className="sidebar-nav" aria-label="Dashboard navigation">
           <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Dashboard</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Cameras</button>
-          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Live Streams</button>
-          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Alerts</button>
-          <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Incidents</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/live-streams')}>Live Streams</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/alerts')}>Alerts</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/incidents')}>Incidents</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/map')}>Map</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/ai-detection')}>AI Detection</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/reports')}>Reports</button>
