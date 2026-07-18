@@ -120,9 +120,9 @@ async function syncUserProfile({ authUserId, email }) {
   if (existing.rows.length > 0) {
     const user = existing.rows[0];
     console.log('[auth] User exists, updating:', user);
-    // Update with all required columns
+    // Update with all required columns - use quotes for camelCase columns
     await db.query(
-      `UPDATE users SET last_login_at = now(), updatedAt = now() WHERE id = $1`,
+      `UPDATE users SET last_login_at = now(), "updatedAt" = now() WHERE id = $1`,
       [authUserId]
     );
     return user;
@@ -133,12 +133,12 @@ async function syncUserProfile({ authUserId, email }) {
   const organizationId = await getDefaultOrganizationId();
   console.log('[auth] Got organizationId:', organizationId);
   
-  // Insert with all required columns
+  // Insert with all required columns - use quotes for camelCase columns
   console.log('[auth] Attempting INSERT with:', { authUserId, email, organizationId });
   const inserted = await db.query(
-    `INSERT INTO users (id, name, email, emailVerified, createdAt, updatedAt, organization_id, user_type, status, last_login_at)
+    `INSERT INTO users (id, name, email, "emailVerified", "createdAt", "updatedAt", organization_id, user_type, status, last_login_at)
      VALUES ($1, $2, $2, true, now(), now(), $3, 'org_admin', 'active', now())
-     ON CONFLICT (id) DO UPDATE SET last_login_at = now(), updatedAt = now()
+     ON CONFLICT (id) DO UPDATE SET last_login_at = now(), "updatedAt" = now()
      RETURNING id, organization_id, user_type, status`,
     [authUserId, email, organizationId],
   );
