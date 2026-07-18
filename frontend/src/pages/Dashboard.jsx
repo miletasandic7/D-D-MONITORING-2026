@@ -923,7 +923,6 @@ export default function Dashboard() {
           <button className="sidebar-nav-item" onClick={() => navigate('/reports')}>Reports</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/users')}>Users</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/settings')}>Settings</button>
-          <button className="sidebar-nav-item sidebar-billing-btn" onClick={() => navigate('/subscription')}>Subscription</button>
         </nav>
 
         <div className="sidebar-footer">
