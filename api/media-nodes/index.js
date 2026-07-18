@@ -5,9 +5,10 @@ const { logPlatformAudit, getIp } = require('../_audit');
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
-    // Any authenticated user can see node health/load (no secrets, no
-    // tenant data) -- useful for an ops/status view in the dashboard.
-    const auth = await requireAuth(req, res);
+    // Media node information is restricted to platform_admin users only.
+    // This data includes infrastructure details that should not be exposed
+    // to regular operators or org_admins.
+    const auth = await requireAuth(req, res, { roles: ['platform_admin'] });
     if (!auth) return;
 
     try {

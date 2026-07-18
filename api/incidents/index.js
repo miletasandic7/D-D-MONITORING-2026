@@ -21,29 +21,37 @@ module.exports = async (req, res) => {
 
     const { rows } = accessibleIds === null
       ? await db.queryAsOrg(auth.organizationId, `
-          SELECT
+          SELECT DISTINCT ON (i.id)
             i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
             i.created_at, i.acknowledged_at, i.resolved_at,
             e.camera_id, e.description AS source_description,
             a.object_type, a.confidence
           FROM incidents i
           JOIN events e ON e.id = i.event_id
-          LEFT JOIN ai_detections a ON a.event_id = e.id
+          LEFT JOIN (
+            SELECT event_id, object_type, MAX(confidence) AS confidence
+            FROM ai_detections
+            GROUP BY event_id, object_type
+          ) a ON a.event_id = e.id
           WHERE e.is_dismissed = FALSE AND i.organization_id = $1
-          ORDER BY i.created_at DESC
+          ORDER BY i.id, i.created_at DESC
           LIMIT 100
         `, [auth.organizationId])
       : await db.queryAsOrg(auth.organizationId, `
-          SELECT
+          SELECT DISTINCT ON (i.id)
             i.id, i.event_id, i.status, i.severity, i.assigned_operator_id,
             i.created_at, i.acknowledged_at, i.resolved_at,
             e.camera_id, e.description AS source_description,
             a.object_type, a.confidence
           FROM incidents i
           JOIN events e ON e.id = i.event_id
-          LEFT JOIN ai_detections a ON a.event_id = e.id
+          LEFT JOIN (
+            SELECT event_id, object_type, MAX(confidence) AS confidence
+            FROM ai_detections
+            GROUP BY event_id, object_type
+          ) a ON a.event_id = e.id
           WHERE e.is_dismissed = FALSE AND i.organization_id = $1 AND i.camera_id = ANY($2::varchar[])
-          ORDER BY i.created_at DESC
+          ORDER BY i.id, i.created_at DESC
           LIMIT 100
         `, [auth.organizationId, accessibleIds]);
 

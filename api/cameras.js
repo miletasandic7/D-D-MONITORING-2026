@@ -27,9 +27,15 @@ module.exports = async (req, res) => {
       // Runs via queryAsOrg (Phase 6 RLS): cameras has Row Level
       // Security enabled, so this needs app.current_org_id set for the
       // policy to match -- see db/migrations/007_rls_audit_logs.sql.
+      //
+      // rtsp_url is only returned to org_admin/platform_admin users --
+      // operators must not see RTSP credentials (passwords may be
+      // embedded in the URL).
+      const isAdmin = auth.userType === 'org_admin' || auth.userType === 'platform_admin';
       const baseSelect = `
-        SELECT c.id, c.name, c.rtsp_url, c.location, c.lat, c.lng, c.enabled,
+        SELECT c.id, c.name, c.location, c.lat, c.lng, c.enabled,
                c.resolution, c.fps, c.codec, n.public_hls_url AS hls_base_url
+               ${isAdmin ? ', c.rtsp_url' : ''}
         FROM cameras c
         LEFT JOIN media_nodes n ON n.id = c.media_node_id`;
 
@@ -148,6 +154,20 @@ module.exports = async (req, res) => {
       console.error('Error deleting camera:', err);
       res.status(500).json({ success: false, error: err.message });
     }
+    return;
+  }
+
+  // ONVIF camera discovery endpoint -- returns a placeholder response.
+  // Real implementation requires a media-node with ONVIF client capability.
+  if (req.method === 'GET' && req.url === '/scan') {
+    const auth = await requireAuth(req, res, { roles: ['platform_admin', 'org_admin'] });
+    if (!auth) return;
+
+    res.status(501).json({
+      success: false,
+      error: 'ONVIF auto-discovery is not available. Please enter camera details manually.',
+      rtsp_url: null,
+    });
     return;
   }
 

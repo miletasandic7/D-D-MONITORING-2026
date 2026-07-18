@@ -32,14 +32,30 @@ async function verifyToken(req) {
     throw err;
   }
 
+  // Determine allowed algorithms based on secret type.
+  // HS256: symmetric (SUPABASE_JWT_SECRET is the shared secret)
+  // RS256/ES256: asymmetric (SUPABASE_JWT_SECRET contains the public key or JWKS URL)
+  const allowedAlgs = ['HS256'];
+  const secret = SUPABASE_JWT_SECRET;
+
+  // Check if secret looks like a PEM public key or JWKS URL
+  if (secret.startsWith('-----BEGIN ') || secret.startsWith('http')) {
+    allowedAlgs.length = 0;
+    if (secret.includes('RSA PUBLIC KEY') || secret.includes('CERTIFICATE')) {
+      allowedAlgs.push('RS256');
+    }
+    if (secret.includes('EC PUBLIC KEY')) {
+      allowedAlgs.push('ES256');
+    }
+    // Default to supporting all asymmetric algorithms if secret format detected
+    if (allowedAlgs.length === 0) {
+      allowedAlgs.push('RS256', 'ES256', 'RS384', 'ES384');
+    }
+  }
+
   let payload;
   try {
-    // Supabase issues HS256 JWTs signed with the project's JWT secret
-    // (Settings -> API -> JWT Secret). If the project uses the newer
-    // asymmetric (RS256/ES256) signing keys instead, this verification
-    // needs to switch to JWKS-based verification -- out of scope for
-    // this phase, noted in the roadmap.
-    payload = jwt.verify(token, SUPABASE_JWT_SECRET, { algorithms: ['HS256'] });
+    payload = jwt.verify(token, secret, { algorithms: allowedAlgs });
   } catch (e) {
     const err = new Error('Invalid or expired token');
     err.statusCode = 401;
@@ -77,6 +93,15 @@ async function syncUserProfile({ authUserId, email }) {
   }
 
   // First login: create the profile as org_admin on the default org.
+  // This auto-creation is disabled by default in production (ALLOW_AUTO_ORG_ADMIN=false).
+  // When disabled, new users must be manually provisioned by a platform_admin.
+  const allowAutoOrgAdmin = String(process.env.ALLOW_AUTO_ORG_ADMIN || 'false').toLowerCase() === 'true';
+  if (!allowAutoOrgAdmin) {
+    const err = new Error('User account not found. Contact your administrator to provision access.');
+    err.statusCode = 403;
+    throw err;
+  }
+
   const organizationId = await getDefaultOrganizationId();
   const inserted = await db.query(
     `INSERT INTO users (id, organization_id, email, user_type, status, last_login_at)

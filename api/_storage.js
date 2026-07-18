@@ -54,6 +54,12 @@ async function uploadObject({ key, body, contentType }) {
     throw err;
   }
 
+  if (!process.env.STORAGE_PUBLIC_BASE_URL && !process.env.STORAGE_ENDPOINT) {
+    const err = new Error('Object storage is not fully configured. Set STORAGE_PUBLIC_BASE_URL (or STORAGE_ENDPOINT) for public URL generation.');
+    err.statusCode = 503;
+    throw err;
+  }
+
   const client = getClient();
   await client.send(new PutObjectCommand({
     Bucket: process.env.STORAGE_BUCKET,
@@ -73,6 +79,9 @@ async function uploadObject({ key, body, contentType }) {
  * workers/retention-job.js).
  */
 function keyFromPublicUrl(storageUrl) {
+  if (!process.env.STORAGE_PUBLIC_BASE_URL && !process.env.STORAGE_ENDPOINT) {
+    return null;
+  }
   const base = (process.env.STORAGE_PUBLIC_BASE_URL || `${process.env.STORAGE_ENDPOINT}/${process.env.STORAGE_BUCKET}`).replace(/\/$/, '');
   if (storageUrl && storageUrl.startsWith(base)) {
     return storageUrl.slice(base.length + 1);

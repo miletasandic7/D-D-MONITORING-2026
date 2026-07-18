@@ -185,14 +185,28 @@ export default function Dashboard() {
 
   // Inline camera add form
   const [showAddCam, setShowAddCam] = useState(false);
-  const [addCamForm, setAddCamForm] = useState({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+  const [addCamForm, setAddCamForm] = useState(() => {
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return { id: `CAM-${timestamp}${randomPart}`, name: '', rtsp_url: '', location: '', lat: '', lng: '' };
+  });
   const [addCamSaving, setAddCamSaving] = useState(false);
   const [addCamError, setAddCamError] = useState('');
 
   // Audio alarm incident count tracker
   const prevNewIncidentsRef = useRef(null);
 
-  const openWizard = () => { setWizardOpen(true); setWizardStep(1); setWizardScanning(false); setWizardDone(false); setNewCamera({ id: '', name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' }); };
+  const openWizard = () => {
+    // Generate a unique camera ID to prevent collisions
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const generatedId = `CAM-${timestamp}${randomPart}`;
+    setWizardOpen(true);
+    setWizardStep(1);
+    setWizardScanning(false);
+    setWizardDone(false);
+    setNewCamera({ id: generatedId, name: '', rtsp_url: '', location: '', lat: '', lng: '', enabled: true, resolution: '1920x1080', fps: 30, codec: 'H264' });
+  };
   const closeWizard = () => setWizardOpen(false);
 
   const runONVIFScan = async () => {
@@ -305,7 +319,7 @@ export default function Dashboard() {
     }
     setAddCamSaving(true);
     setAddCamError('');
-    const id = `CAM-${String((cameras?.length || 0) + 1).padStart(2, '0')}`;
+    const id = addCamForm.id;
     const newCam = {
       id,
       name: addCamForm.name.trim(),
@@ -321,7 +335,10 @@ export default function Dashboard() {
     try {
       await api.post('/cameras', newCam);
       setCameras((prev) => [...(prev || []), newCam]);
-      setAddCamForm({ name: '', rtsp_url: '', location: '', lat: '', lng: '' });
+      // Generate new ID for next camera
+      const timestamp = Date.now().toString(36);
+      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+      setAddCamForm({ id: `CAM-${timestamp}${randomPart}`, name: '', rtsp_url: '', location: '', lat: '', lng: '' });
       setShowAddCam(false);
       addAuditEntry(`Added camera: ${newCam.name} (${id})`);
     } catch (err) {
@@ -998,7 +1015,7 @@ export default function Dashboard() {
             <button className="primary-button" onClick={() => { setShowAddCam((v) => !v); setAddCamError(''); }}>
               + Add Camera
             </button>
-            <button className="ghost-button" onClick={() => setWizardOpen(true)}>
+            <button className="ghost-button" onClick={() => { document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' }); }}>
               + Create Incident
             </button>
           </div>
@@ -1508,6 +1525,14 @@ export default function Dashboard() {
 
             {showAddCam && (
               <form className="add-cam-form" onSubmit={submitAddCamera}>
+                <label className="search-field">
+                  <span>Camera ID</span>
+                  <input
+                    value={addCamForm.id}
+                    onChange={(e) => setAddCamForm((p) => ({ ...p, id: e.target.value }))}
+                    placeholder="Auto-generated, you can customize"
+                  />
+                </label>
                 <label className="search-field">
                   <span>Camera Name</span>
                   <input

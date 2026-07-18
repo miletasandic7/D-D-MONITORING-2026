@@ -84,7 +84,6 @@ function normalizeCheckoutBody(body = {}) {
   return {
     planId: String(body.planId || '').trim(),
     planName: String(body.planName || '').trim(),
-    amount: String(body.amount || '').trim(),
     currency: String(body.currency || 'USD').trim().toUpperCase(),
     district: String(body.district || '').trim(),
     contacts: body.contacts || {},
@@ -119,8 +118,8 @@ async function createPayPalOrder(body = {}) {
           custom_id: plan.id,
           description: `${plan.name} for ${checkout.district}`,
           amount: {
-            currency_code: checkout.currency || plan.currency,
-            value: checkout.amount || plan.amount,
+            currency_code: plan.currency,
+            value: plan.amount,
           },
         },
       ],

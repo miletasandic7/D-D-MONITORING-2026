@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     // caller's own rows.
     const incidentResult = await db.queryAsOrg(
       auth.organizationId,
-      'SELECT id, organization_id, status FROM incidents WHERE event_id = $1',
+      'SELECT id, organization_id, status, acknowledged_at FROM incidents WHERE event_id = $1',
       [eventId],
     );
     if (incidentResult.rows.length === 0 || incidentResult.rows[0].organization_id !== auth.organizationId) {
