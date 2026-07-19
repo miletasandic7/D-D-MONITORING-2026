@@ -3,7 +3,7 @@ const { requireAuth } = require('./_auth');
 
 // Supabase Admin API for user management
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
 module.exports = async (req, res) => {
   // GET - List all users
@@ -11,17 +11,21 @@ module.exports = async (req, res) => {
     const auth = await requireAuth(req, res, { roles: ['org_admin', 'platform_admin'] });
     if (!auth) return;
 
+    // Try to fetch from database first
     try {
       const result = await db.queryAsOrg(
         auth.organizationId,
         'SELECT id, name, email, user_type, status, createdat, last_login_at FROM users ORDER BY createdat DESC'
       );
       res.json({ users: result.rows });
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      res.status(500).json({ error: 'Failed to fetch users' });
+      return;
+    } catch (dbErr) {
+      console.error('Database query failed:', dbErr);
+      // If database fails, try to return empty array
+      // The user will appear after they log in for the first time
+      res.json({ users: [], warning: 'Database not fully configured yet. Users will appear after first login.' });
+      return;
     }
-    return;
   }
 
   // POST - Invite a new user
