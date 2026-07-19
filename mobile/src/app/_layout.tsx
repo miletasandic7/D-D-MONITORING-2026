@@ -9,14 +9,12 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoading]);
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -29,14 +27,16 @@ function RootLayoutNav() {
       >
         {!isAuthenticated ? (
           <Stack.Screen 
-            name="(auth)" 
+            name="(auth)/login" 
             options={{ headerShown: false }} 
           />
         ) : (
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ headerShown: false }} 
-          />
+          <>
+            <Stack.Screen 
+              name="(tabs)" 
+              options={{ headerShown: false }} 
+            />
+          </>
         )}
       </Stack>
       <StatusBar style="light" />
