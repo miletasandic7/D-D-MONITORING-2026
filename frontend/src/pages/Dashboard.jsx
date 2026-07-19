@@ -1295,7 +1295,7 @@ export default function Dashboard() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Alarm response</p>
-              <h3>Map, location, and auto-report</h3>
+              <h3>Map & Location</h3>
             </div>
             <button className="ghost-button" type="button" onClick={() => setShowBilling(true)}>Open Packages</button>
           </div>
@@ -1344,54 +1344,6 @@ export default function Dashboard() {
                   <span className="alarm-label">Explanation</span>
                   <strong>{reportSummary}</strong>
                 </div>
-              </div>
-            </div>
-
-            <div className="report-card">
-              <div className="panel-heading panel-heading-tight">
-                <div>
-                  <p className="eyebrow">Automatic report generator</p>
-                  <h4>Incident summary</h4>
-                </div>
-                <button type="button" className="ghost-button incident-action-button" onClick={downloadReport} disabled={!selectedAlarmEvent}>
-                  Download report
-                </button>
-              </div>
-
-              <label className="search-field">
-                <span>Report note</span>
-                <textarea
-                  rows="4"
-                  value={reportNotes}
-                  onChange={(e) => setReportNotes(e.target.value)}
-                  placeholder="Add dispatch notes, witness details, or response instructions..."
-                />
-              </label>
-
-              <div className="report-preview">
-                <pre>{JSON.stringify({ ...generatedReport, notes: reportNotes }, null, 2)}</pre>
-              </div>
-
-              <div className="report-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => {
-                    setPaymentStep('complete');
-                    addAuditEntry(`Auto-report generated for Event #${generatedReport.incident.event_id || 'unknown'}`);
-                  }}
-                >
-                  Mark as dispatched
-                </button>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => {
-                    if (selectedAlarmEvent) openAlarmMap(selectedAlarmEvent);
-                  }}
-                >
-                  Focus map on latest alarm
-                </button>
               </div>
             </div>
           </div>
