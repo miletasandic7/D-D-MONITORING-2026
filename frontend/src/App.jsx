@@ -15,6 +15,7 @@ const AIDetection = lazy(() => import('./pages/AIDetection'));
 const LiveStreams = lazy(() => import('./pages/LiveStreams'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const Incidents = lazy(() => import('./pages/Incidents'));
+const Cameras = lazy(() => import('./pages/Cameras'));
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/live-streams" element={<LiveStreams />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/incidents" element={<Incidents />} />
+          <Route path="/cameras" element={<Cameras />} />
         </Routes>
       </Suspense>
     </Router>
