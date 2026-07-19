@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Video, ResizeMode } from 'expo-video';
+import { VideoView } from 'expo-video';
 import api from '../../services/api';
 import { Camera } from '../../types';
 
@@ -87,13 +87,10 @@ export default function CameraDetailScreen() {
             <Text style={styles.offlineSubtext}>Nema dostupnog video signala</Text>
           </View>
         ) : camera.stream_url ? (
-          <Video
-            source={{ uri: camera.stream_url }}
+          <VideoView
+            player={null}
             style={styles.video}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            isLooping
-            shouldPlay={!isFullscreen}
+            showsNativeControls
           />
         ) : (
           <View style={styles.offlinePlaceholder}>

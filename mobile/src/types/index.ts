@@ -28,7 +28,7 @@ export interface User {
   id: string;
   email: string;
   display_name: string;
-  user_type: 'admin' | 'operator' | 'viewer';
+  user_type: 'admin' | 'operator' | 'viewer' | 'org_admin' | 'platform_admin';
 }
 
 export interface LoginCredentials {
