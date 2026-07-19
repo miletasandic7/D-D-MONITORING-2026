@@ -2,6 +2,8 @@
 
 D&D Global AI Surveillance is a production-ready Security Operations Center (SOC) interface for advanced AI-powered security monitoring and threat detection.
 
+For more information visit: https://d-d-monitoring-2026.vercel.app
+
 ## Features
 
 - **Real-time Camera Monitoring**: Live HLS video streams from surveillance cameras
