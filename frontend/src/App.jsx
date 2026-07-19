@@ -16,6 +16,10 @@ const LiveStreams = lazy(() => import('./pages/LiveStreams'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const Incidents = lazy(() => import('./pages/Incidents'));
 const Cameras = lazy(() => import('./pages/Cameras'));
+const VideoPlayback = lazy(() => import('./pages/VideoPlayback'));
+const FaceRecognition = lazy(() => import('./pages/FaceRecognition'));
+const LicensePlateRecognition = lazy(() => import('./pages/LicensePlateRecognition'));
+const EmergencyDispatch = lazy(() => import('./pages/EmergencyDispatch'));
 
 function App() {
   return (
@@ -34,6 +38,10 @@ function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/incidents" element={<Incidents />} />
           <Route path="/cameras" element={<Cameras />} />
+          <Route path="/video-playback" element={<VideoPlayback />} />
+          <Route path="/face-recognition" element={<FaceRecognition />} />
+          <Route path="/license-plates" element={<LicensePlateRecognition />} />
+          <Route path="/emergency" element={<EmergencyDispatch />} />
         </Routes>
       </Suspense>
     </Router>

@@ -916,10 +916,14 @@ export default function Dashboard() {
           <button className="sidebar-nav-item" onClick={() => navigate('/dashboard')}>Dashboard</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/cameras')}>Cameras</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/live-streams')}>Live Streams</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/video-playback')}>Video Playback</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/alerts')}>Alerts</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/incidents')}>Incidents</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/map')}>Map</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/ai-detection')}>AI Detection</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/face-recognition')}>Face Recognition</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/license-plates')}>LPR</button>
+          <button className="sidebar-nav-item" onClick={() => navigate('/emergency')}>Emergency</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/reports')}>Reports</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/users')}>Users</button>
           <button className="sidebar-nav-item" onClick={() => navigate('/settings')}>Settings</button>
