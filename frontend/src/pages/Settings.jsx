@@ -91,6 +91,36 @@ export default function Settings() {
         </div>
 
         <div className="settings-section">
+          <h3>Legal</h3>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Terms of Service</div>
+              <div className="setting-desc">Service terms and conditions</div>
+            </div>
+            <a 
+              href="/terms-of-service.html" 
+              target="_blank"
+              style={{ color: '#00d4ff', textDecoration: 'none', fontSize: '.85rem' }}
+            >
+              View →
+            </a>
+          </div>
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Privacy Policy</div>
+              <div className="setting-desc">How we handle your data</div>
+            </div>
+            <a 
+              href="/privacy-policy.html" 
+              target="_blank"
+              style={{ color: '#00d4ff', textDecoration: 'none', fontSize: '.85rem' }}
+            >
+              View →
+            </a>
+          </div>
+        </div>
+
+        <div className="settings-section">
           <h3>System</h3>
           <div className="setting-row">
             <div>
@@ -110,7 +140,13 @@ export default function Settings() {
 
         <div className="version">
           D&D Global AI Surveillance v1.0.0<br/>
-          Security Command Center
+          Security Command Center<br/><br/>
+          <span style={{ fontSize: '.75rem', color: '#6a8aaa' }}>
+            By using this service, you agree to our{' '}
+            <a href="/terms-of-service.html" target="_blank" style={{ color: '#00d4ff' }}>Terms of Service</a>
+            {' '}and{' '}
+            <a href="/privacy-policy.html" target="_blank" style={{ color: '#00d4ff' }}>Privacy Policy</a>
+          </span>
         </div>
       </div>
     </>
