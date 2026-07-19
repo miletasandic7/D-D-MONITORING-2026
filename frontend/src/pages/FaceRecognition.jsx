@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { FeatureGuard } from '../services/subscriptionGuard';
 
 const PAGE_CSS = `
   .face-page { padding: 2rem; color: #e5eef7; }
@@ -97,6 +98,7 @@ export default function FaceRecognition() {
   };
 
   return (
+    <FeatureGuard feature="faceRecognition">
     <>
       <style>{PAGE_CSS}</style>
       <div className="face-page">
@@ -178,5 +180,6 @@ export default function FaceRecognition() {
         )}
       </div>
     </>
+    </FeatureGuard>
   );
 }

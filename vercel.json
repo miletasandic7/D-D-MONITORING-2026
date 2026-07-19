@@ -7,6 +7,10 @@
       "source": "/(.*)",
       "headers": [
         {
+          "key": "X-Robots-Tag",
+          "value": "index, follow"
+        },
+        {
           "key": "Cross-Origin-Opener-Policy",
           "value": "same-origin-allow-popups"
         },
@@ -35,6 +39,7 @@
   ],
   "rewrites": [
     { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
     { "source": "/llms.txt", "destination": "/llms.txt" },
     { "source": "/api/incidents/:eventId/activity", "destination": "/api/incidents/:eventId?path=activity" },
     { "source": "/api/incidents/:eventId/status", "destination": "/api/incidents/:eventId?path=status" },
