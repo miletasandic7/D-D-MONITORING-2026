@@ -48,36 +48,16 @@ export default function FaceRecognition() {
   const fetchFaceData = async () => {
     try {
       const res = await api.get('/face-detections');
-      setDetections(res.data.detections || generateMockDetections());
-      setKnownFaces(res.data.known || generateMockKnownFaces());
+      setDetections(res.data.detections || []);
+      setKnownFaces(res.data.known || []);
     } catch (err) {
       console.error('Failed to fetch face data:', err);
-      setDetections(generateMockDetections());
-      setKnownFaces(generateMockKnownFaces());
+      setDetections([]);
+      setKnownFaces([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const generateMockDetections = () => {
-    const names = ['John Doe', 'Jane Smith', 'Unknown Person', 'Bob Wilson', 'Alice Brown'];
-    const statuses = ['known', 'unknown', 'suspicious'];
-    return Array.from({ length: 20 }, (_, i) => ({
-      id: `face-${i + 1}`,
-      name: names[i % names.length],
-      status: i < 3 ? 'suspicious' : statuses[i % statuses.length],
-      confidence: 0.7 + Math.random() * 0.28,
-      camera: ['Entrance', 'Lobby', 'Parking', 'Back Door'][i % 4],
-      timestamp: new Date(Date.now() - i * 300000).toISOString()
-    }));
-  };
-
-  const generateMockKnownFaces = () => [
-    { id: '1', name: 'John Doe', role: 'Employee', lastSeen: '2 hours ago' },
-    { id: '2', name: 'Jane Smith', role: 'Security', lastSeen: '5 mins ago' },
-    { id: '3', name: 'Bob Wilson', role: 'Visitor', lastSeen: '1 day ago' },
-    { id: '4', name: 'Alice Brown', role: 'Employee', lastSeen: '3 hours ago' }
-  ];
 
   const stats = {
     total: detections.length,

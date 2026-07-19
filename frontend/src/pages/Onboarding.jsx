@@ -367,8 +367,7 @@ export default function Onboarding() {
       setStep(5); // Success
     } catch (err) {
       console.error('Onboarding failed:', err);
-      // For demo, just show success
-      setStep(5);
+      alert('Setup failed. Please check your connection and try again.');
     }
     setLoading(false);
   };

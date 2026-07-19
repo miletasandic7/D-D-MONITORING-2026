@@ -48,18 +48,6 @@ const PTZControl = ({ cameraId, cameraName, enabled = true }) => {
       });
     } catch (err) {
       console.error('PTZ command failed:', err);
-      // Simulate for demo
-      setPosition(prev => {
-        switch (action) {
-          case 'pan_left': return { ...prev, pan: Math.max(-180, prev.pan - 5) };
-          case 'pan_right': return { ...prev, pan: Math.min(180, prev.pan + 5) };
-          case 'tilt_up': return { ...prev, tilt: Math.min(90, prev.tilt + 5) };
-          case 'tilt_down': return { ...prev, tilt: Math.min(-45, prev.tilt - 5) };
-          case 'zoom_in': return { ...prev, zoom: Math.min(100, prev.zoom + 10) };
-          case 'zoom_out': return { ...prev, zoom: Math.max(10, prev.zoom - 10) };
-          default: return prev;
-        }
-      });
     }
     
     setTimeout(() => setMoving(null), 200);

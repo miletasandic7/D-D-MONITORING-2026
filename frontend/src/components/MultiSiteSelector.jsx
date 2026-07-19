@@ -197,15 +197,4 @@ const MultiSiteSelector = ({ sites = [], currentSite, onSiteChange }) => {
   );
 };
 
-// Mock data for demo
-MultiSiteSelector.defaultProps = {
-  sites: [
-    { id: 1, name: 'Headquarters', location: 'New York, NY', cameras: 24, icon: '🏢' },
-    { id: 2, name: 'Warehouse A', location: 'Newark, NJ', cameras: 12, icon: '🏭' },
-    { id: 3, name: 'Retail Store', location: 'Manhattan, NY', cameras: 8, icon: '🏪' },
-    { id: 4, name: 'Parking Garage', location: 'Jersey City, NJ', cameras: 6, icon: '🅿️' },
-    { id: 5, name: 'Distribution Center', location: 'Elizabeth, NJ', cameras: 32, icon: '📦' }
-  ]
-};
-
 export default MultiSiteSelector;

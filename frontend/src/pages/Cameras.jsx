@@ -26,74 +26,7 @@ const PAGE_CSS = `
   .empty-cameras { text-align: center; padding: 4rem; background: rgba(10,18,38,.85); border: 1px solid rgba(87,140,255,.18); border-radius: 16px; }
   .empty-cameras h3 { color: #dff7ff; margin-bottom: 1rem; }
   .empty-cameras p { color: #8ab0c9; margin-bottom: 1.5rem; }
-  .demo-section { background: rgba(0,212,255,.05); border: 2px solid rgba(0,212,255,.2); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; }
-  .demo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-  .demo-title { color: #00d4ff; font-family: 'Orbitron', sans-serif; font-size: 1rem; display: flex; align-items: center; gap: .5rem; }
-  .demo-badge { background: rgba(0,212,80,.2); color: #00d450; padding: .25rem .75rem; border-radius: 20px; font-size: .75rem; font-weight: bold; }
-  .demo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-  .demo-card { background: rgba(10,18,38,.95); border: 1px solid rgba(87,140,255,.18); border-radius: 12px; overflow: hidden; transition: all .2s; }
-  .demo-card:hover { border-color: rgba(0,212,255,.5); }
-  .demo-preview { position: relative; height: 160px; background: #000; }
-  .demo-preview iframe { width: 100%; height: 100%; border: none; }
-  .demo-live { position: absolute; top: .5rem; left: .5rem; background: rgba(255,50,50,.9); color: white; padding: .2rem .5rem; border-radius: 4px; font-size: .65rem; font-weight: bold; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
-  .demo-info { padding: .75rem; }
-  .demo-info h5 { color: #dff7ff; font-size: .9rem; margin-bottom: .25rem; }
-  .demo-info p { color: #6a8aaa; font-size: .75rem; display: flex; align-items: center; gap: .25rem; }
-  .webcam-stream { width: 100%; height: 100%; object-fit: cover; }
 `;
-
-// PUBLIC LIVE WEBCAMS FOR TESTING
-const PUBLIC_WEBCAMS = [
-  {
-    id: 'pub-nyc',
-    name: 'Times Square NYC',
-    location: 'New York, USA',
-    type: 'image',
-    url: 'https://images.webcams.travel/preview/1203281713.jpg',
-    link: 'https://www.nycwebcams.com'
-  },
-  {
-    id: 'pub-vegas',
-    name: 'Las Vegas Strip',
-    location: 'Las Vegas, NV',
-    type: 'image',
-    url: 'https://www.travelwebcam.com/cams/live/lasvegas/img.jpg',
-    link: 'https://www.lvstripwebcam.com'
-  },
-  {
-    id: 'pub-tokyo',
-    name: 'Shinjuku Tokyo',
-    location: 'Tokyo, Japan',
-    type: 'image',
-    url: 'https://tokyo-g.jp/cdn/webcam.jpg',
-    link: 'https://tokyo.webcams.travel'
-  },
-  {
-    id: 'pub-london',
-    name: 'London Eye',
-    location: 'London, UK',
-    type: 'image',
-    url: 'https://london-webcam.net/live.jpg',
-    link: 'https://www.londonwebcam.net'
-  },
-  {
-    id: 'pub-dubai',
-    name: 'Dubai Marina',
-    location: 'Dubai, UAE',
-    type: 'image',
-    url: 'https://dubai-cam.com/live.jpg',
-    link: 'https://www.dubaiwebcams.com'
-  },
-  {
-    id: 'pub-paris',
-    name: 'Eiffel Tower',
-    location: 'Paris, France',
-    type: 'image',
-    url: 'https://pariswebcam.fr/eiffel.jpg',
-    link: 'https://pariswebcams.com'
-  }
-];
 
 export default function Cameras() {
   const [cameras, setCameras] = useState([]);
@@ -170,50 +103,6 @@ export default function Cameras() {
             <span style={{ color: '#ff5050', fontSize: '.9rem' }}>✗ {stats.offline} Offline</span>
             <button className="add-cam-btn" onClick={() => setShowAddForm(true)}>+ Add Camera</button>
           </div>
-        </div>
-
-        {/* PUBLIC WEBCAMS SECTION */}
-        <div className="demo-section">
-          <div className="demo-header">
-            <div className="demo-title">
-              🌐 Live Public Webcams
-              <span className="demo-badge">REAL STREAMS</span>
-            </div>
-            <span style={{ color: '#6a8aaa', fontSize: '.8rem' }}>Test your monitoring system with live feeds</span>
-          </div>
-          <div className="demo-grid">
-            {PUBLIC_WEBCAMS.map(webcam => (
-              <div key={webcam.id} className="demo-card">
-                <div className="demo-preview">
-                  {webcam.type === 'youtube' ? (
-                    <iframe 
-                      src={webcam.url} 
-                      title={webcam.name}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <img 
-                      src={webcam.url} 
-                      alt={webcam.name}
-                      className="webcam-stream"
-                      onError={(e) => {
-                        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="50" x="25">📷</text></svg>';
-                      }}
-                    />
-                  )}
-                  <span className="demo-live">🔴 LIVE</span>
-                </div>
-                <div className="demo-info">
-                  <h5>📹 {webcam.name}</h5>
-                  <p>📍 {webcam.location}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p style={{ color: '#6a8aaa', fontSize: '.75rem', marginTop: '1rem', textAlign: 'center' }}>
-            💡 These are public webcam streams. To add your own cameras, use the "+ Add Camera" button above.
-          </p>
         </div>
 
         {showAddForm && (

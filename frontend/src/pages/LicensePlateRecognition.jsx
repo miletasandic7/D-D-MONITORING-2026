@@ -48,30 +48,13 @@ export default function LicensePlateRecognition() {
   const fetchPlateData = async () => {
     try {
       const res = await api.get('/license-plates');
-      setPlates(res.data.plates || generateMockPlates());
+      setPlates(res.data.plates || []);
     } catch (err) {
       console.error('Failed to fetch plate data:', err);
-      setPlates(generateMockPlates());
+      setPlates([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockPlates = () => {
-    const states = ['CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA'];
-    const statuses = ['allowed', 'blocked', 'unknown'];
-    return Array.from({ length: 30 }, (_, i) => {
-      const status = i < 5 ? 'blocked' : i < 15 ? 'allowed' : 'unknown';
-      return {
-        id: `plate-${i + 1}`,
-        plate_number: `${states[i % states.length]}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-        vehicle: ['Toyota Camry', 'Honda Civic', 'Ford F-150', 'BMW 328i', 'Tesla Model 3'][i % 5],
-        color: ['Black', 'White', 'Silver', 'Blue', 'Red'][i % 5],
-        status,
-        camera: ['Gate 1', 'Parking Entrance', 'Loading Dock', 'Visitor Parking'][i % 4],
-        timestamp: new Date(Date.now() - i * 1800000).toISOString()
-      };
-    });
   };
 
   const filteredPlates = plates.filter(p => 

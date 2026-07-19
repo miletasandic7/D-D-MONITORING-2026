@@ -29,15 +29,14 @@ const TwoWayAudio = ({ cameraId, cameraName, enabled = true }) => {
     try {
       setError(null);
       
-      // Get audio stream from camera (simulated for demo)
-      // U pravoj aplikaciji, ovo bi bilo: fetch('/api/cameras/' + cameraId + '/audio')
+      // Get audio stream from camera
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Create audio context - koristi VRLO MALO CPU-a
+      // Create audio context
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       
-      // Create analyser for visualization (optional)
+      // Create analyser for visualization
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       

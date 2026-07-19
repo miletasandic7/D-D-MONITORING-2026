@@ -101,38 +101,10 @@ const AuditLogExport = ({ logs = [], title = 'Audit Log' }) => {
       }
     } catch (err) {
       console.error('Export failed:', err);
-      // Demo export fallback
-      generateDemoExport();
+      alert('Export failed. Please check your connection and try again.');
     }
     
     setExporting(false);
-  };
-
-  // Demo export (simulated - in real app this would be server-side)
-  const generateDemoExport = () => {
-    const demoLogs = logs.length > 0 ? logs : [
-      { id: 1, timestamp: '2026-07-19 10:30:00', user: 'admin', action: 'Login', details: 'Successful login', severity: 'info' },
-      { id: 2, timestamp: '2026-07-19 10:35:00', user: 'admin', action: 'Camera Added', details: 'Added camera CAM-001', severity: 'info' },
-      { id: 3, timestamp: '2026-07-19 11:00:00', user: 'operator', action: 'Alert Acknowledged', details: 'Alert #1234 acknowledged', severity: 'warning' },
-      { id: 4, timestamp: '2026-07-19 12:00:00', user: 'admin', action: 'Settings Changed', details: 'Updated notification settings', severity: 'info' }
-    ];
-
-    if (format === 'csv') {
-      const csv = [
-        ['ID', 'Timestamp', 'User', 'Action', 'Details', 'Severity'].join(','),
-        ...demoLogs.map(log => [log.id, log.timestamp, log.user, log.action, log.details, log.severity].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `audit-log-${dateRange.start}-${dateRange.end}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    }
   };
 
   return (

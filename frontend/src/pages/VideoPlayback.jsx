@@ -50,27 +50,13 @@ export default function VideoPlayback() {
   const fetchRecordings = async () => {
     try {
       const res = await api.get('/recordings');
-      setRecordings(res.data.recordings || generateMockRecordings());
+      setRecordings(res.data.recordings || []);
     } catch (err) {
       console.error('Failed to fetch recordings:', err);
-      setRecordings(generateMockRecordings());
+      setRecordings([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockRecordings = () => {
-    const cameras = ['Entrance Camera', 'Parking Lot', 'Back Door', 'Lobby', 'Server Room'];
-    const types = ['Motion', 'Continuous', 'Alarm', 'Manual'];
-    return Array.from({ length: 15 }, (_, i) => ({
-      id: `rec-${i + 1}`,
-      camera_name: cameras[i % cameras.length],
-      type: types[i % types.length],
-      duration: Math.floor(Math.random() * 3600) + 60,
-      size: Math.floor(Math.random() * 500) + 50,
-      timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-      thumbnail: null
-    }));
   };
 
   const formatDuration = (seconds) => {

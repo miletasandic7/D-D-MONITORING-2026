@@ -87,7 +87,7 @@ const WebhookIntegrations = () => {
       alert('✅ Test message sent successfully!');
     } catch (err) {
       console.error('Test failed:', err);
-      alert('✅ Demo: Test message would be sent to ' + webhook.name);
+      alert('❌ Failed to send test message. Please check the webhook URL and try again.');
     }
     setTesting(null);
   };
