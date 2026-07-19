@@ -1,11 +1,51 @@
-:root {
+/* Dark Mode (default) */
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bg-primary: #050b16;
+  --bg-secondary: #08111e;
+  --bg-card: rgba(10, 18, 38, 0.85);
+  --bg-card-hover: rgba(15, 25, 45, 0.9);
+  --text-primary: #e5eef7;
+  --text-secondary: #8ab0c9;
+  --text-muted: #6a8aaa;
+  --accent-primary: #00d4ff;
+  --accent-secondary: #8c4dff;
+  --accent-success: #00d450;
+  --accent-warning: #ffb432;
+  --accent-danger: #ff5050;
+  --border-color: rgba(87, 140, 255, 0.18);
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   background:
     radial-gradient(circle at top left, rgba(0, 163, 255, 0.16), transparent 28%),
     radial-gradient(circle at top right, rgba(0, 255, 170, 0.08), transparent 22%),
     linear-gradient(180deg, #08111e 0%, #050b14 100%);
-  color: #e5eef7;
+}
+
+/* Light Mode */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: rgba(255, 255, 255, 1);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --accent-primary: #0088cc;
+  --accent-secondary: #6c5ce7;
+  --accent-success: #00b894;
+  --accent-warning: #fdcb6e;
+  --accent-danger: #e74c3c;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(180deg, #f5f7fa 0%, #e4e8ec 100%);
+}
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: inherit;
+  color: var(--text-primary);
 }
 
 * {
