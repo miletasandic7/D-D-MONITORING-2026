@@ -31,6 +31,16 @@ const PAGE_CSS = `
 export default function Cameras() {
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newCamera, setNewCamera] = useState({
+    name: '',
+    stream_url: '',
+    location: '',
+    lat: '',
+    lng: ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchCameras();
@@ -44,6 +54,35 @@ export default function Cameras() {
       console.error('Failed to fetch cameras:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCamera = async () => {
+    if (!newCamera.name) {
+      setError('Camera name is required');
+      return;
+    }
+    
+    setSaving(true);
+    setError('');
+    
+    try {
+      const res = await api.post('/cameras', {
+        name: newCamera.name,
+        stream_url: newCamera.stream_url || null,
+        location: newCamera.location || null,
+        lat: newCamera.lat ? parseFloat(newCamera.lat) : null,
+        lng: newCamera.lng ? parseFloat(newCamera.lng) : null
+      });
+      
+      setCameras([...cameras, res.data.camera]);
+      setShowAddForm(false);
+      setNewCamera({ name: '', stream_url: '', location: '', lat: '', lng: '' });
+    } catch (err) {
+      console.error('Failed to add camera:', err);
+      setError('Failed to add camera. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -62,17 +101,73 @@ export default function Cameras() {
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <span style={{ color: '#00d450', fontSize: '.9rem' }}>✓ {stats.online} Online</span>
             <span style={{ color: '#ff5050', fontSize: '.9rem' }}>✗ {stats.offline} Offline</span>
-            <button className="add-cam-btn">+ Add Camera</button>
+            <button className="add-cam-btn" onClick={() => setShowAddForm(true)}>+ Add Camera</button>
           </div>
         </div>
 
+        {showAddForm && (
+          <div style={{ background: 'rgba(10,18,38,.95)', border: '1px solid rgba(0,212,255,.3)', borderRadius: '16px', padding: '2rem', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#dff7ff', marginBottom: '1.5rem' }}>Add New Camera</h3>
+            {error && <p style={{ color: '#ff5050', marginBottom: '1rem' }}>{error}</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <input
+                type="text"
+                placeholder="Camera Name *"
+                value={newCamera.name}
+                onChange={(e) => setNewCamera({...newCamera, name: e.target.value})}
+                style={{ padding: '.8rem', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.3)', borderRadius: '8px', color: '#dff7ff' }}
+              />
+              <input
+                type="text"
+                placeholder="Location (e.g., Entrance, Parking)"
+                value={newCamera.location}
+                onChange={(e) => setNewCamera({...newCamera, location: e.target.value})}
+                style={{ padding: '.8rem', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.3)', borderRadius: '8px', color: '#dff7ff' }}
+              />
+              <input
+                type="text"
+                placeholder="Stream URL (rtsp://...)"
+                value={newCamera.stream_url}
+                onChange={(e) => setNewCamera({...newCamera, stream_url: e.target.value})}
+                style={{ padding: '.8rem', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.3)', borderRadius: '8px', color: '#dff7ff', gridColumn: '1 / -1' }}
+              />
+              <input
+                type="number"
+                placeholder="Latitude"
+                value={newCamera.lat}
+                onChange={(e) => setNewCamera({...newCamera, lat: e.target.value})}
+                style={{ padding: '.8rem', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.3)', borderRadius: '8px', color: '#dff7ff' }}
+              />
+              <input
+                type="number"
+                placeholder="Longitude"
+                value={newCamera.lng}
+                onChange={(e) => setNewCamera({...newCamera, lng: e.target.value})}
+                style={{ padding: '.8rem', background: 'rgba(87,125,196,.1)', border: '1px solid rgba(87,125,196,.3)', borderRadius: '8px', color: '#dff7ff' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button className="add-cam-btn" onClick={handleAddCamera} disabled={saving}>
+                {saving ? 'Adding...' : 'Add Camera'}
+              </button>
+              <button 
+                className="cam-btn cam-btn-secondary" 
+                style={{ padding: '.8rem 1.5rem' }}
+                onClick={() => { setShowAddForm(false); setError(''); }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="empty-cameras"><p>Loading cameras...</p></div>
-        ) : cameras.length === 0 ? (
+        ) : cameras.length === 0 && !showAddForm ? (
           <div className="empty-cameras">
             <h3>No Cameras Configured</h3>
             <p>Add cameras to start monitoring your security zones.</p>
-            <button className="add-cam-btn" style={{ marginTop: '1rem' }}>+ Add First Camera</button>
+            <button className="add-cam-btn" style={{ marginTop: '1rem' }} onClick={() => setShowAddForm(true)}>+ Add First Camera</button>
           </div>
         ) : (
           <div className="cameras-grid">
