@@ -16,25 +16,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Always start as not authenticated - user must login
   useEffect(() => {
-    checkAuth();
+    // Clear any existing session on app start
+    const initAuth = async () => {
+      await api.logout();
+      setUser(null);
+    };
+    initAuth();
   }, []);
-
-  const checkAuth = async () => {
-    try {
-      const currentUser = await api.getCurrentUser();
-      const isAuth = await api.isAuthenticated();
-      if (currentUser && isAuth) {
-        setUser(currentUser);
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const login = async (credentials: LoginCredentials) => {
     try {
