@@ -97,10 +97,10 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Demo Mode Info */}
+        {/* Info */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            U demo modu možete koristiti bilo koji email i lozinku
+            Koristite iste kredencijale kao za web platformu
           </Text>
         </View>
       </View>

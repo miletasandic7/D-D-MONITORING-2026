@@ -1,80 +1,102 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import { createClient, SupabaseClient, User as SupabaseUser, Session } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Camera, Incident, User, DashboardStats, AIDetection, LoginCredentials, AuthResponse, StreamToken } from '../types';
 
-// Configure your backend URL here
-// For local development, use your computer's IP address
-// For production, use your deployed API URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+// SUPABASE CONFIGURATION
+const SUPABASE_URL = 'https://qskedgnkckgmwwxtduqt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFza2VkZ25rY2tnbXd3eHRkdXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwNjU2MDAsImV4cCI6MjAyNjY0MTYwMH0.K3kJm3dqNLOiV1j7y4y9jH5z1L8cR5vF6eB2aW4xQcM';
+
+// API Configuration
+const API_BASE_URL = 'https://d-d-monitoring-2026-hhkwk6m39-miletasandic7s-projects.vercel.app/api';
 
 class ApiService {
-  private api: AxiosInstance;
-  private token: string | null = null;
+  private supabase: SupabaseClient;
+  private apiBaseUrl: string;
 
   constructor() {
-    this.api = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Add auth interceptor
-    this.api.interceptors.request.use(
-      async (config) => {
-        if (!this.token) {
-          this.token = await SecureStore.getItemAsync('auth_token');
-        }
-        if (this.token) {
-          config.headers.Authorization = `Bearer ${this.token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Add response interceptor for error handling
-    this.api.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          this.logout();
-        }
-        return Promise.reject(error);
-      }
-    );
+    this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    this.apiBaseUrl = API_BASE_URL;
   }
 
   // ==================== AUTH ====================
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await this.api.post<AuthResponse>('/auth/login', credentials);
-      this.token = response.data.token;
-      await SecureStore.setItemAsync('auth_token', this.token);
-      await SecureStore.setItemAsync('user', JSON.stringify(response.data.user));
-      return response.data;
-    } catch (error) {
-      // Fallback for demo mode - simulate login
-      if (__DEV__) {
-        const demoUser: User = {
-          id: 'demo-admin-id',
-          email: credentials.email,
-          display_name: 'Admin User',
-          user_type: 'admin',
-        };
-        const demoToken = 'demo-token-' + Date.now();
-        await SecureStore.setItemAsync('auth_token', demoToken);
-        await SecureStore.setItemAsync('user', JSON.stringify(demoUser));
-        return { token: demoToken, user: demoUser };
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
       }
+
+      if (!data.session || !data.user) {
+        throw new Error('Login failed - no session returned');
+      }
+
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email || credentials.email,
+        display_name: data.user.user_metadata?.display_name || data.user.email?.split('@')[0] || 'User',
+        user_type: 'org_admin',
+      };
+
+      await SecureStore.setItemAsync('auth_token', data.session.access_token);
+      await SecureStore.setItemAsync('user', JSON.stringify(user));
+
+      return {
+        token: data.session.access_token,
+        user,
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
+  async register(email: string, password: string, displayName?: string): Promise<AuthResponse> {
+    try {
+      const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName || email.split('@')[0],
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data.session || !data.user) {
+        throw new Error('Registration failed - no session returned');
+      }
+
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email || email,
+        display_name: displayName || email.split('@')[0],
+        user_type: 'org_admin',
+      };
+
+      await SecureStore.setItemAsync('auth_token', data.session.access_token);
+      await SecureStore.setItemAsync('user', JSON.stringify(user));
+
+      return {
+        token: data.session.access_token,
+        user,
+      };
+    } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   }
 
   async logout(): Promise<void> {
-    this.token = null;
+    await this.supabase.auth.signOut();
     await SecureStore.deleteItemAsync('auth_token');
     await SecureStore.deleteItemAsync('user');
   }
@@ -82,7 +104,11 @@ class ApiService {
   async getCurrentUser(): Promise<User | null> {
     const userJson = await SecureStore.getItemAsync('user');
     if (userJson) {
-      return JSON.parse(userJson);
+      try {
+        return JSON.parse(userJson);
+      } catch {
+        return null;
+      }
     }
     return null;
   }
@@ -92,21 +118,52 @@ class ApiService {
     return !!token;
   }
 
+  async getAccessToken(): Promise<string | null> {
+    return await SecureStore.getItemAsync('auth_token');
+  }
+
+  // ==================== API CALLS WITH AUTH ====================
+
+  private async apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const token = await this.getAccessToken();
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (response.status === 401) {
+      await this.logout();
+      throw new Error('Unauthorized - please login again');
+    }
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'API request failed');
+    }
+
+    return data;
+  }
+
   // ==================== DASHBOARD ====================
 
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      const response = await this.api.get<DashboardStats>('/dashboard/stats');
-      return response.data;
+      const data = await this.apiCall('/dashboard/stats');
+      return data;
     } catch (error) {
-      // Return demo data
-      return {
-        total_cameras: 12,
-        online_cameras: 10,
-        offline_cameras: 2,
-        active_incidents: 3,
-        critical_incidents: 1,
-      };
+      console.error('Dashboard stats error:', error);
+      throw error;
     }
   }
 
@@ -114,222 +171,92 @@ class ApiService {
 
   async getCameras(): Promise<Camera[]> {
     try {
-      const response = await this.api.get<Camera[]>('/cameras');
-      return response.data;
+      const data = await this.apiCall('/cameras');
+      return data;
     } catch (error) {
-      // Return demo cameras
-      return this.getDemoCameras();
+      console.error('Get cameras error:', error);
+      throw error;
     }
   }
 
   async getCamera(id: string): Promise<Camera> {
     try {
-      const response = await this.api.get<Camera>(`/cameras/${id}`);
-      return response.data;
+      const data = await this.apiCall(`/cameras/${id}`);
+      return data;
     } catch (error) {
-      const cameras = this.getDemoCameras();
-      const camera = cameras.find(c => c.id === id);
-      if (camera) return camera;
+      console.error('Get camera error:', error);
       throw error;
     }
   }
 
   async getCameraStreamToken(cameraId: string): Promise<StreamToken> {
     try {
-      const response = await this.api.get<StreamToken>(`/cameras/${cameraId}/stream-token`);
-      return response.data;
+      const data = await this.apiCall(`/cameras/${cameraId}/stream-token`);
+      return data;
     } catch (error) {
-      // Return demo token
-      return {
-        camera_id: cameraId,
-        token: 'demo-token-' + Date.now(),
-        expires_at: new Date(Date.now() + 3600000).toISOString(),
-      };
+      console.error('Get stream token error:', error);
+      throw error;
     }
-  }
-
-  private getDemoCameras(): Camera[] {
-    return [
-      {
-        id: '1',
-        name: 'Ulaz - Glavna kapija',
-        location: 'Beograd, Novi Beograd',
-        rtsp_url: 'rtsp://demo/cam1',
-        enabled: true,
-        status: 'online',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        name: 'Parking - Sever',
-        location: 'Beograd, Novi Beograd',
-        rtsp_url: 'rtsp://demo/cam2',
-        enabled: true,
-        status: 'online',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '3',
-        name: 'Skladište A',
-        location: 'Beograd, Zemun',
-        rtsp_url: 'rtsp://demo/cam3',
-        enabled: true,
-        status: 'recording',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '4',
-        name: 'Kancelarije - Floor 1',
-        location: 'Beograd, Stari Grad',
-        rtsp_url: 'rtsp://demo/cam4',
-        enabled: true,
-        status: 'online',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '5',
-        name: 'Ulaz - Stražnji',
-        location: 'Beograd, Vračar',
-        rtsp_url: 'rtsp://demo/cam5',
-        enabled: false,
-        status: 'offline',
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '6',
-        name: 'Proizvodnja - Linija 1',
-        location: 'Beograd, Zemun',
-        rtsp_url: 'rtsp://demo/cam6',
-        enabled: true,
-        status: 'online',
-        stream_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        created_at: new Date().toISOString(),
-      },
-    ];
   }
 
   // ==================== INCIDENTS ====================
 
   async getIncidents(status?: string): Promise<Incident[]> {
     try {
-      const params = status ? { status } : {};
-      const response = await this.api.get<Incident[]>('/incidents', { params });
-      return response.data;
+      const endpoint = status ? `/incidents?status=${status}` : '/incidents';
+      const data = await this.apiCall(endpoint);
+      return data;
     } catch (error) {
-      return this.getDemoIncidents();
+      console.error('Get incidents error:', error);
+      throw error;
     }
   }
 
   async getIncident(id: string): Promise<Incident> {
     try {
-      const response = await this.api.get<Incident>(`/incidents/${id}`);
-      return response.data;
+      const data = await this.apiCall(`/incidents/${id}`);
+      return data;
     } catch (error) {
-      const incidents = this.getDemoIncidents();
-      const incident = incidents.find(i => i.id === id);
-      if (incident) return incident;
+      console.error('Get incident error:', error);
       throw error;
     }
   }
 
   async updateIncidentStatus(id: string, status: string): Promise<Incident> {
     try {
-      const response = await this.api.patch<Incident>(`/incidents/${id}`, { status });
-      return response.data;
+      const data = await this.apiCall(`/incidents/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      return data;
     } catch (error) {
-      // Update locally
-      const incidents = this.getDemoIncidents();
-      const incident = incidents.find(i => i.id === id);
-      if (incident) {
-        incident.status = status as Incident['status'];
-        return incident;
-      }
+      console.error('Update incident error:', error);
       throw error;
     }
   }
 
   async createIncident(data: Partial<Incident>): Promise<Incident> {
     try {
-      const response = await this.api.post<Incident>('/incidents', data);
-      return response.data;
+      const response = await this.apiCall('/incidents', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response;
     } catch (error) {
-      // Create locally
-      const newIncident: Incident = {
-        id: 'new-' + Date.now(),
-        title: data.title || 'New Incident',
-        description: data.description || '',
-        status: 'new',
-        priority: data.priority || 'medium',
-        camera_id: data.camera_id,
-        camera_name: data.camera_name,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      return newIncident;
+      console.error('Create incident error:', error);
+      throw error;
     }
-  }
-
-  private getDemoIncidents(): Incident[] {
-    return [
-      {
-        id: '1',
-        title: 'Nepoznata osoba na parkingu',
-        description: 'Detektovana osoba u neovlašćenom terminu na sever parkingu',
-        status: 'new',
-        priority: 'high',
-        camera_id: '2',
-        camera_name: 'Parking - Sever',
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        updated_at: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: '2',
-        title: 'Pokret u magacinu van radnog vremena',
-        description: 'AI detekcija pokreta u skladištu A nakon 22:00',
-        status: 'acknowledged',
-        priority: 'critical',
-        camera_id: '3',
-        camera_name: 'Skladište A',
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-        updated_at: new Date(Date.now() - 1800000).toISOString(),
-      },
-      {
-        id: '3',
-        title: 'Slab video signal - Kamera 5',
-        description: 'Periodični gubitak signala, potrebna provera konekcije',
-        status: 'in_progress',
-        priority: 'medium',
-        camera_id: '5',
-        camera_name: 'Ulaz - Stražnji',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: '4',
-        title: 'Test incident - može se ignorisati',
-        description: 'Sistem test - može se označiti kao false alarm',
-        status: 'new',
-        priority: 'low',
-        created_at: new Date(Date.now() - 600000).toISOString(),
-        updated_at: new Date(Date.now() - 600000).toISOString(),
-      },
-    ];
   }
 
   // ==================== AI DETECTIONS ====================
 
   async getAIDetections(limit = 20): Promise<AIDetection[]> {
     try {
-      const response = await this.api.get<AIDetection[]>('/ai-detections', { 
-        params: { limit } 
-      });
-      return response.data;
+      const data = await this.apiCall(`/ai-detections?limit=${limit}`);
+      return data;
     } catch (error) {
-      return [];
+      console.error('Get AI detections error:', error);
+      throw error;
     }
   }
 
@@ -337,9 +264,10 @@ class ApiService {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.api.get('/health');
-      return response.data.success === true;
+      const data = await this.apiCall('/health');
+      return data.success === true;
     } catch (error) {
+      console.error('Health check error:', error);
       return false;
     }
   }
