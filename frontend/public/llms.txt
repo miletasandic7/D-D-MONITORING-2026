@@ -2,45 +2,31 @@
 
 D&D Global AI Surveillance is a production-ready Security Operations Center (SOC) interface for advanced AI-powered security monitoring and threat detection.
 
-For more information visit: https://d-d-monitoring-2026.vercel.app
+## Pages
+
+- [Dashboard](https://d-d-monitoring-2026.vercel.app/dashboard) - Main monitoring dashboard
+- [Cameras](https://d-d-monitoring-2026.vercel.app/cameras) - Camera management
+- [Live Streams](https://d-d-monitoring-2026.vercel.app/live-streams) - Live video feeds
+- [Video Playback](https://d-d-monitoring-2026.vercel.app/video-playback) - Recorded footage
+- [Alerts](https://d-d-monitoring-2026.vercel.app/alerts) - Security alerts
+- [Incidents](https://d-d-monitoring-2026.vercel.app/incidents) - Incident management
+- [Map](https://d-d-monitoring-2026.vercel.app/map) - Geographic view
+- [AI Detection](https://d-d-monitoring-2026.vercel.app/ai-detection) - AI threat detection
+- [Face Recognition](https://d-d-monitoring-2026.vercel.app/face-recognition) - Face identification
+- [LPR](https://d-d-monitoring-2026.vercel.app/license-plates) - License plate recognition
+- [Emergency](https://d-d-monitoring-2026.vercel.app/emergency) - Emergency dispatch
+- [Reports](https://d-d-monitoring-2026.vercel.app/reports) - Security reports
+- [Users](https://d-d-monitoring-2026.vercel.app/users) - User management
+- [Settings](https://d-d-monitoring-2026.vercel.app/settings) - System settings
 
 ## Features
 
 - **Real-time Camera Monitoring**: Live HLS video streams from surveillance cameras
 - **AI Detection**: Automated threat detection using AI and machine learning
+- **Face Recognition**: Face identification and tracking
+- **License Plate Recognition**: Automatic LPR system
 - **Incident Management**: Comprehensive incident tracking and response workflow
-- **Activity Timeline**: Real-time activity feed showing security events
-- **Alarm Response**: Automatic alarm mapping and incident reporting
+- **Emergency Dispatch**: Emergency services coordination
+- **Video Playback**: Review recorded footage
 - **User Management**: Multi-user access with role-based permissions
-- **Advanced Filtering**: Smart search with object type, color, and equipment attributes
-
-## Technology Stack
-
-- **Frontend**: React with Vite build system
-- **Authentication**: Supabase Auth
-- **Database**: PostgreSQL with real-time subscriptions
-- **Video Streaming**: HLS.js for live camera feeds
-- **Styling**: Custom CSS with cyber/security aesthetic
-- **Deployment**: Vercel with automatic CI/CD
-
-## API Endpoints
-
-- `GET /api/cameras` - Retrieve camera inventory
-- `POST /api/cameras` - Add new camera
-- `DELETE /api/cameras` - Remove camera
-- `GET /api/incidents` - Get security incidents
-- `PATCH /api/incidents/:id/status` - Update incident status
-- `GET /api/search/attributes` - Advanced search filters
-
-## Use Cases
-
-This SOC interface is designed for:
-- Security operations centers
-- Surveillance monitoring teams
-- Law enforcement agencies
-- Enterprise security departments
-- Critical infrastructure protection
-
-## Documentation
-
-For API documentation and integration guides, see the project repository.
+- **White-label Branding**: Custom branding support
