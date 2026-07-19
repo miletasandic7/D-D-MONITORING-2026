@@ -20,6 +20,7 @@ const VideoPlayback = lazy(() => import('./pages/VideoPlayback'));
 const FaceRecognition = lazy(() => import('./pages/FaceRecognition'));
 const LicensePlateRecognition = lazy(() => import('./pages/LicensePlateRecognition'));
 const EmergencyDispatch = lazy(() => import('./pages/EmergencyDispatch'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
       <Suspense fallback={<div style={{ background: '#050b16', minHeight: '100vh' }} />}>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
           <Route path="/settings" element={<Settings />} />
