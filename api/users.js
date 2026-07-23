@@ -19,13 +19,17 @@ module.exports = async (req, res) => {
       );
       res.json({ users: result.rows });
       return;
-    } catch (dbErr) {
-      console.error('Database query failed:', dbErr);
-      // If database fails, try to return empty array
-      // The user will appear after they log in for the first time
-      res.json({ users: [], warning: 'Database not fully configured yet. Users will appear after first login.' });
-      return;
-    }
+    }       } catch (dbErr) {
+        console.error('Database query failed:', dbErr);
+        const errorMessage = dbErr?.message || dbErr?.toString() || 'Unknown database error';
+        res.status(500).json({ 
+          success: false, 
+          error: 'Database query failed', 
+          detail: errorMessage,
+          hint: 'Check DATABASE_URL environment variable and database schema'
+        });
+        return;
+      }
   }
 
   // POST - Invite a new user

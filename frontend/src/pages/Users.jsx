@@ -134,7 +134,7 @@ export default function Users() {
                     {user.email?.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div className="user-details">
-                    <h3>{user.name || user.email}</h3>
+                    <h3>{user.display_name || user.name || user.email}</h3>
                     <p>{user.email}</p>
                   </div>
                 </div>
