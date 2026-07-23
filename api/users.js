@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
           organization_id,
           COALESCE(created_at, createdat, NOW()) AS created_at
         FROM users
-        WHERE organization_id = \$1
+        WHERE organization_id::text = \$1::text
         ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST
       \`;
       

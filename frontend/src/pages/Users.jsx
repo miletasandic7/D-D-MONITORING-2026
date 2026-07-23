@@ -100,7 +100,11 @@ export default function Users() {
       } else if (err.response?.status === 401) {
         setError('You must be logged in as Admin to invite users.');
       } else {
-        setError(err.response?.data?.error || 'An unexpected error occurred. Please try again.');
+        const errData = err.response?.data;
+        setError(
+          typeof errData === 'string' ? errData : 
+          errData?.error || errData?.message || err.message || 'An unexpected error occurred. Please try again.'
+        );
       }
     } finally {
       setInviting(false);
@@ -181,7 +185,7 @@ export default function Users() {
                 </select>
               </div>
 
-              {error && <p className="error-msg">{error}</p>}
+              {error && <p className="error-msg">{String(error)}</p>}
               {success && <p className="success-msg">{success}</p>}
 
               {showInstructions && (
