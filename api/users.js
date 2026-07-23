@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     try {
       const result = await db.queryAsOrg(
         auth.organizationId,
-        'SELECT id, display_name, email, user_type, status, created_at, last_login_at FROM users ORDER BY created_at DESC'
+        'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, COALESCE(created_at, createdat, NOW()) AS created_at FROM users ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST'
       );
       res.json({ users: result.rows });
       return;
