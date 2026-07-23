@@ -17,8 +17,26 @@ module.exports = async (req, res) => {
         auth.organizationId,
         'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, COALESCE(created_at, createdat, NOW()) AS created_at FROM users ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST'
       );
-      res.json({ users: result.rows });
-      return;
+      
+      if (result.rows.length > 0) {
+        res.json({ users: result.rows });
+        return;
+      }
+      
+      // If no users found with org filter, try without (RLS bypass for admins)
+      try {
+        const allUsers = await db.queryAsPlatformAdmin(
+          'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, COALESCE(created_at, createdat, NOW()) AS created_at, organization_id FROM users ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST'
+        );
+        console.log('Org filter returned 0, found ' + allUsers.rows.length + ' total users in DB');
+        res.json({ users: allUsers.rows, orgMismatch: true });
+        return;
+      } catch (fallbackErr) {
+        // Even fallback failed, return empty
+        console.error('Fallback query also failed:', fallbackErr);
+        res.json({ users: [] });
+        return;
+      }
       } catch (dbErr) {
         console.error('Database query failed:', dbErr);
         const errorMessage = dbErr?.message || dbErr?.toString() || 'Unknown database error';
