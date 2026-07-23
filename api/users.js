@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
       );
       res.json({ users: result.rows });
       return;
-    }       } catch (dbErr) {
+      } catch (dbErr) {
         console.error('Database query failed:', dbErr);
         const errorMessage = dbErr?.message || dbErr?.toString() || 'Unknown database error';
         res.status(500).json({ 
