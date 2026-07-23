@@ -22,12 +22,35 @@ api.interceptors.request.use(async (config) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
         config.headers.Authorization = `Bearer ${session.access_token}`;
+        return config;
       }
     }
   } catch {
-    // Let the request go out without a token; the backend will
-    // respond with 401 and the UI's existing error handling covers it.
+    // Fall through to localStorage fallback
   }
+
+  // Fallback: check localStorage for Convex Auth / Supabase tokens
+  try {
+    const raw = localStorage.getItem("supabase.auth.token");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const t = parsed?.currentSession?.access_token || parsed?.access_token || null;
+      if (t) {
+        config.headers.Authorization = `Bearer ${t}`;
+        return config;
+      }
+    }
+    const t =
+      localStorage.getItem("token") ||
+      localStorage.getItem("auth_token") ||
+      localStorage.getItem("convex-auth-token");
+    if (t) {
+      config.headers.Authorization = `Bearer ${t}`;
+    }
+  } catch {
+    // Let request go out without a token
+  }
+
   return config;
 });
 
