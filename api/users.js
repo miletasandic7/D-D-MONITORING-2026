@@ -11,40 +11,49 @@ module.exports = async (req, res) => {
     const auth = await requireAuth(req, res, { roles: ['org_admin', 'platform_admin'] });
     if (!auth) return;
 
-    // Try to fetch from database first
     try {
-      const result = await db.queryAsOrg(
-        auth.organizationId,
-        'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, COALESCE(created_at, createdat, NOW()) AS created_at FROM users ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST'
-      );
+      // Use db.query directly instead of queryAsOrg to avoid UUID validation issues
+      const sql = \`
+        SELECT id, email,
+          COALESCE(display_name, name, email) AS display_name,
+          COALESCE(user_type, role, 'operator') AS user_type,
+          COALESCE(status, 'active') AS status,
+          organization_id,
+          COALESCE(created_at, createdat, NOW()) AS created_at
+        FROM users
+        WHERE organization_id = \$1
+        ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST
+      \`;
+      
+      const result = await db.query(sql, [auth.organizationId]);
       
       if (result.rows.length > 0) {
         res.json({ users: result.rows });
         return;
       }
       
-      // If no users found with org filter, try without (RLS bypass for admins)
+      // If no users found with org filter, try without filter to check if DB has any users
       try {
-        const allUsers = await db.queryAsPlatformAdmin(
-          'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, COALESCE(created_at, createdat, NOW()) AS created_at, organization_id FROM users ORDER BY COALESCE(created_at, createdat) DESC NULLS LAST'
+        const allResult = await db.query(
+          'SELECT id, email, COALESCE(display_name, name, email) AS display_name, COALESCE(user_type, role, \'operator\') AS user_type, COALESCE(status, \'active\') AS status, organization_id FROM users ORDER BY created_at DESC NULLS LAST'
         );
-        console.log('Org filter returned 0, found ' + allUsers.rows.length + ' total users in DB');
-        res.json({ users: allUsers.rows, orgMismatch: true });
-        return;
-      } catch (fallbackErr) {
-        // Even fallback failed, return empty
-        console.error('Fallback query also failed:', fallbackErr);
-        res.json({ users: [] });
-        return;
+        console.log('Org filter returned 0, found ' + allResult.rows.length + ' total users in DB');
+        if (allResult.rows.length > 0) {
+          res.json({ users: allResult.rows, orgMismatch: true });
+          return;
+        }
+      } catch (noOrgErr) {
+        console.log('No-org query also failed (expected if table is empty):', noOrgErr.message);
       }
+      
+      res.json({ users: [] });
+      return;
       } catch (dbErr) {
         console.error('Database query failed:', dbErr);
-        const errorMessage = dbErr?.message || dbErr?.toString() || 'Unknown database error';
-        res.status(500).json({ 
-          success: false, 
-          error: 'Database query failed', 
-          detail: errorMessage,
-          hint: 'Check DATABASE_URL environment variable and database schema'
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch users',
+          details: (dbErr && dbErr.message) ? dbErr.message : String(dbErr)
         });
         return;
       }
